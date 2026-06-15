@@ -15,8 +15,8 @@ const statusType = ref('success')
 let canvas, ctx, animFrameId
 let spotlightEl
 
-// Matrix background
-const chars = '01アイウエオカキクケコ∞∑∏√∫≈≠≤≥'.split('')
+// Digital rain background
+const chars = '01アイウエオカキクケコ∞∑∏√∫≈≠≤≥{}[]<>/\\|'.split('')
 const fontSize = 14
 let columns = []
 let drops = []
@@ -45,24 +45,24 @@ function resizeCanvas() {
 
 function animate() {
   if (!ctx || !canvas) return
-  ctx.fillStyle = 'rgba(5, 5, 8, 0.06)'
+  ctx.fillStyle = 'rgba(6, 10, 22, 0.07)'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.font = `${fontSize}px 'Courier New', monospace`
 
-  const colors = ['#00aaaa', '#00cc88', '#6644aa', '#44cc66', '#555588']
+  const colors = ['#1a5c1a', '#2d8c2d', '#39ff14', '#0d3d0d', '#4dcc4d']
 
   for (let i = 0; i < drops.length; i++) {
     const char = chars[Math.floor(Math.random() * chars.length)]
     const color = colors[Math.floor(Math.random() * colors.length)]
     ctx.fillStyle = color
-    ctx.globalAlpha = 0.3 + Math.random() * 0.3
+    ctx.globalAlpha = 0.2 + Math.random() * 0.3
     ctx.fillText(char, columns[i], drops[i] * fontSize)
     ctx.globalAlpha = 1
 
     if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
       drops[i] = 0
     }
-    drops[i] += 0.5 + Math.random() * 0.5
+    drops[i] += 0.4 + Math.random() * 0.6
   }
   animFrameId = requestAnimationFrame(animate)
 }
@@ -137,16 +137,22 @@ onBeforeUnmount(() => {
   <div class="login-container">
     <canvas id="matrix-canvas"></canvas>
     <div class="spotlight"></div>
+    <div class="scanline"></div>
 
     <div class="login-card">
+      <div class="card-border"></div>
       <div class="glitch-wrapper">
         <h1 class="glitch-title" data-text="AGENT SCOPE">AGENT SCOPE</h1>
       </div>
-      <p class="subtitle">AI CHAT PLATFORM</p>
+      <p class="subtitle">NEURAL CHAT INTERFACE</p>
 
       <div class="tab-switch">
-        <button :class="['tab-btn', { active: isLoginMode }]" @click="isLoginMode = true">登录</button>
-        <button :class="['tab-btn', { active: !isLoginMode }]" @click="isLoginMode = false">注册</button>
+        <button :class="['tab-btn', { active: isLoginMode }]" @click="isLoginMode = true">
+          <span class="btn-bracket">[</span> 登录 <span class="btn-bracket">]</span>
+        </button>
+        <button :class="['tab-btn', { active: !isLoginMode }]" @click="isLoginMode = false">
+          <span class="btn-bracket">[</span> 注册 <span class="btn-bracket">]</span>
+        </button>
       </div>
 
       <form @submit.prevent="handleSubmit" class="login-form">
@@ -156,6 +162,7 @@ onBeforeUnmount(() => {
             <circle cx="12" cy="7" r="4" />
           </svg>
           <input v-model="username" type="text" placeholder="用户名" autocomplete="username" />
+          <span class="input-line"></span>
         </div>
 
         <div class="input-group">
@@ -164,6 +171,7 @@ onBeforeUnmount(() => {
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           <input v-model="password" type="password" placeholder="密码" autocomplete="current-password" />
+          <span class="input-line"></span>
         </div>
 
         <div v-if="!isLoginMode" class="input-group">
@@ -172,25 +180,31 @@ onBeforeUnmount(() => {
             <path d="M19 21v-1a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v1" />
           </svg>
           <input v-model="nickname" type="text" placeholder="昵称（可选）" />
+          <span class="input-line"></span>
         </div>
 
         <button type="submit" class="submit-btn" :disabled="loading">
           <span v-if="loading" class="spinner"></span>
-          <span v-else>{{ isLoginMode ? 'LOGIN' : 'REGISTER' }}</span>
+          <span v-else class="btn-text">
+            <span class="btn-bracket">&gt;</span>
+            {{ isLoginMode ? 'AUTHENTICATE' : 'REGISTER' }}
+            <span class="btn-bracket">&lt;</span>
+          </span>
         </button>
       </form>
 
       <div v-if="statusMsg" :class="['status-msg', statusType]">
+        <span class="status-icon">{{ statusType === 'success' ? '&#9670;' : '&#9670;' }}</span>
         {{ statusMsg }}
       </div>
 
       <div class="demo-info">
-        <span class="demo-label">DEMO体验账号：</span>
-        <span>demo / 654321</span>
+        <span class="demo-label">DEMO体验账号或自行注册</span>
+        <span class="demo-creds">demo/654321</span>
       </div>
     </div>
 
-    <footer class="footer">© 2026 DEMO BY: 吴志浩</footer>
+    <footer class="footer">&copy; 2026 AGENT SCOPE // NEURAL INTERFACE v2.0</footer>
   </div>
 </template>
 
@@ -203,7 +217,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #050508;
+  background: #060a16;
 }
 
 #matrix-canvas {
@@ -216,12 +230,29 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+.scanline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(57, 255, 20, 0.008) 2px,
+    rgba(57, 255, 20, 0.008) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
 .spotlight {
   position: fixed;
-  width: 340px;
-  height: 340px;
+  width: 400px;
+  height: 400px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 255, 255, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(57, 255, 20, 0.06) 0%, transparent 70%);
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 1;
@@ -232,15 +263,27 @@ onBeforeUnmount(() => {
 .login-card {
   position: relative;
   z-index: 2;
-  width: 400px;
-  padding: 40px;
-  background: rgba(10, 10, 20, 0.85);
-  border: 1px solid rgba(0, 255, 255, 0.15);
-  border-radius: 16px;
+  width: 420px;
+  padding: 44px;
+  background: rgba(8, 14, 28, 0.9);
+  border: 1px solid rgba(57, 255, 20, 0.12);
+  border-radius: 4px;
   backdrop-filter: blur(20px);
   box-shadow:
-    0 0 40px rgba(0, 255, 255, 0.05),
-    inset 0 0 60px rgba(0, 0, 0, 0.3);
+    0 0 60px rgba(57, 255, 20, 0.04),
+    inset 0 0 80px rgba(0, 0, 0, 0.4);
+}
+
+.card-border {
+  position: absolute;
+  inset: -1px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(57, 255, 20, 0.2), transparent 40%, transparent 60%, rgba(255, 165, 0, 0.15));
+  z-index: -1;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  padding: 1px;
 }
 
 .glitch-wrapper {
@@ -250,15 +293,15 @@ onBeforeUnmount(() => {
 
 .glitch-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 900;
-  color: #00ffff;
+  color: #39ff14;
   text-shadow:
-    0 0 10px rgba(0, 255, 255, 0.5),
-    0 0 20px rgba(0, 255, 255, 0.3),
-    0 0 40px rgba(0, 255, 255, 0.15);
+    0 0 10px rgba(57, 255, 20, 0.6),
+    0 0 30px rgba(57, 255, 20, 0.3),
+    0 0 60px rgba(57, 255, 20, 0.1);
   position: relative;
-  letter-spacing: 4px;
+  letter-spacing: 6px;
 }
 
 .glitch-title::before,
@@ -272,47 +315,47 @@ onBeforeUnmount(() => {
 }
 
 .glitch-title::before {
-  color: #ff00ff;
+  color: #ffa500;
   z-index: -1;
-  animation: glitch1 3s infinite;
+  animation: glitch1 4s infinite;
 }
 
 .glitch-title::after {
-  color: #ffff00;
+  color: #00ff88;
   z-index: -2;
-  animation: glitch2 3s infinite;
+  animation: glitch2 4s infinite;
 }
 
 @keyframes glitch1 {
-  0%, 90%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
-  92% { clip-path: inset(20% 0 40% 0); transform: translate(-3px, 1px); }
-  94% { clip-path: inset(60% 0 10% 0); transform: translate(3px, -1px); }
-  96% { clip-path: inset(30% 0 50% 0); transform: translate(-2px, 2px); }
+  0%, 88%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+  90% { clip-path: inset(15% 0 45% 0); transform: translate(-4px, 2px); }
+  92% { clip-path: inset(55% 0 15% 0); transform: translate(4px, -1px); }
+  94% { clip-path: inset(25% 0 55% 0); transform: translate(-2px, 3px); }
 }
 
 @keyframes glitch2 {
-  0%, 90%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
-  91% { clip-path: inset(50% 0 20% 0); transform: translate(2px, -2px); }
-  93% { clip-path: inset(10% 0 70% 0); transform: translate(-3px, 1px); }
-  95% { clip-path: inset(40% 0 30% 0); transform: translate(2px, 1px); }
+  0%, 88%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+  89% { clip-path: inset(45% 0 25% 0); transform: translate(3px, -3px); }
+  91% { clip-path: inset(10% 0 65% 0); transform: translate(-4px, 2px); }
+  93% { clip-path: inset(35% 0 35% 0); transform: translate(3px, 1px); }
 }
 
 .subtitle {
   text-align: center;
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 6px;
-  margin-bottom: 32px;
+  font-size: 0.65rem;
+  color: rgba(57, 255, 20, 0.35);
+  letter-spacing: 8px;
+  margin-bottom: 36px;
 }
 
 .tab-switch {
   display: flex;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  background: rgba(57, 255, 20, 0.03);
+  border-radius: 2px;
   padding: 4px;
   margin-bottom: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(57, 255, 20, 0.08);
 }
 
 .tab-btn {
@@ -320,24 +363,33 @@ onBeforeUnmount(() => {
   padding: 10px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 2px;
   transition: all 0.3s;
   font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.tab-btn .btn-bracket {
+  color: rgba(57, 255, 20, 0.3);
 }
 
 .tab-btn.active {
-  background: rgba(0, 255, 255, 0.12);
-  color: #00ffff;
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.15);
+  background: rgba(57, 255, 20, 0.08);
+  color: #39ff14;
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.1);
+}
+
+.tab-btn.active .btn-bracket {
+  color: #39ff14;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .input-group {
@@ -351,7 +403,7 @@ onBeforeUnmount(() => {
   left: 14px;
   width: 18px;
   height: 18px;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(57, 255, 20, 0.3);
   pointer-events: none;
   z-index: 1;
 }
@@ -359,36 +411,51 @@ onBeforeUnmount(() => {
 .input-group input {
   width: 100%;
   padding: 14px 14px 14px 44px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  color: #fff;
+  background: rgba(57, 255, 20, 0.02);
+  border: 1px solid rgba(57, 255, 20, 0.1);
+  border-radius: 2px;
+  color: #e0ffe0;
   font-size: 0.95rem;
   outline: none;
   transition: all 0.3s;
+  font-family: 'Courier New', monospace;
 }
 
 .input-group input::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(57, 255, 20, 0.2);
 }
 
 .input-group input:focus {
-  border-color: rgba(0, 255, 255, 0.5);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
-  background: rgba(0, 255, 255, 0.03);
+  border-color: rgba(57, 255, 20, 0.5);
+  box-shadow: 0 0 20px rgba(57, 255, 20, 0.08);
+  background: rgba(57, 255, 20, 0.04);
+}
+
+.input-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #39ff14;
+  transition: width 0.3s;
+}
+
+.input-group input:focus ~ .input-line {
+  width: 100%;
 }
 
 .submit-btn {
   width: 100%;
   padding: 14px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #00cccc, #00aaff);
-  color: #000;
-  font-size: 1rem;
+  border: 1px solid rgba(57, 255, 20, 0.3);
+  border-radius: 2px;
+  background: rgba(57, 255, 20, 0.08);
+  color: #39ff14;
+  font-size: 0.95rem;
   font-weight: 700;
   font-family: 'Orbitron', sans-serif;
-  letter-spacing: 3px;
+  letter-spacing: 4px;
   cursor: pointer;
   transition: all 0.3s;
   margin-top: 8px;
@@ -396,22 +463,50 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(57, 255, 20, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.submit-btn:hover:not(:disabled)::before {
+  left: 100%;
+}
+
 .submit-btn:hover:not(:disabled) {
-  box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 30px rgba(57, 255, 20, 0.2);
+  border-color: rgba(57, 255, 20, 0.6);
   transform: translateY(-1px);
 }
 
 .submit-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-bracket {
+  color: rgba(57, 255, 20, 0.5);
+  font-weight: 400;
 }
 
 .spinner {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(0, 0, 0, 0.3);
-  border-top-color: #000;
+  border: 2px solid rgba(57, 255, 20, 0.2);
+  border-top-color: #39ff14;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -423,22 +518,30 @@ onBeforeUnmount(() => {
 .status-msg {
   margin-top: 16px;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.85rem;
   text-align: center;
   animation: fadeIn 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .status-msg.success {
-  background: rgba(0, 255, 100, 0.08);
-  color: #00ff64;
-  border: 1px solid rgba(0, 255, 100, 0.15);
+  background: rgba(57, 255, 20, 0.06);
+  color: #39ff14;
+  border: 1px solid rgba(57, 255, 20, 0.15);
 }
 
 .status-msg.error {
-  background: rgba(255, 100, 100, 0.08);
-  color: #ff6b6b;
-  border: 1px solid rgba(255, 100, 100, 0.15);
+  background: rgba(255, 80, 80, 0.06);
+  color: #ff5050;
+  border: 1px solid rgba(255, 80, 80, 0.15);
+}
+
+.status-icon {
+  font-size: 0.7rem;
 }
 
 @keyframes fadeIn {
@@ -447,22 +550,28 @@ onBeforeUnmount(() => {
 }
 
 .demo-info {
-  margin-top: 20px;
+  margin-top: 24px;
   text-align: center;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.25);
+  font-family: 'Courier New', monospace;
 }
 
 .demo-label {
   display: inline-block;
-  padding: 2px 8px;
-  background: rgba(0, 255, 100, 0.1);
-  color: #00ff64;
-  border-radius: 4px;
-  font-size: 0.7rem;
+  padding: 2px 10px;
+  background: rgba(255, 165, 0, 0.1);
+  color: #ffa500;
+  border: 1px solid rgba(255, 165, 0, 0.2);
+  border-radius: 2px;
+  font-size: 0.65rem;
   font-weight: 700;
-  margin-right: 8px;
-  letter-spacing: 1px;
+  margin-right: 10px;
+  letter-spacing: 2px;
+}
+
+.demo-creds {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .footer {
@@ -471,9 +580,10 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100%;
   text-align: center;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.15);
-  letter-spacing: 2px;
+  font-size: 0.65rem;
+  color: rgba(57, 255, 20, 0.15);
+  letter-spacing: 3px;
   z-index: 2;
+  font-family: 'Courier New', monospace;
 }
 </style>

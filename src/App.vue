@@ -13,26 +13,26 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  font-family: 'Courier New', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #060a16;
   min-height: 100vh;
-  color: #ffffff;
+  color: #e0ffe0;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(57, 255, 20, 0.02);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 255, 0.15);
-  border-radius: 3px;
+  background: rgba(57, 255, 20, 0.15);
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 255, 0.3);
+  background: rgba(57, 255, 20, 0.3);
 }
 </style>
