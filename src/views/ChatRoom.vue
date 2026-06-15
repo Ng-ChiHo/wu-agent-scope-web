@@ -321,6 +321,12 @@ onBeforeUnmount(() => {
           </svg>
           新对话
         </button>
+        <a href="https://jaeger.xpeak.top" target="_blank" rel="noopener noreferrer" class="jaeger-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+          Jaeger 链路追踪
+        </a>
       </div>
 
       <div class="conversation-list">
@@ -536,6 +542,32 @@ onBeforeUnmount(() => {
 .sidebar-header {
   padding: 16px;
   border-bottom: 1px solid rgba(57, 255, 20, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jaeger-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(57, 255, 20, 0.04);
+  border: 1px solid rgba(57, 255, 20, 0.1);
+  border-radius: 2px;
+  color: rgba(57, 255, 20, 0.5);
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.jaeger-link:hover {
+  background: rgba(57, 255, 20, 0.08);
+  border-color: rgba(57, 255, 20, 0.25);
+  color: #39ff14;
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.06);
 }
 
 .new-chat-btn {
