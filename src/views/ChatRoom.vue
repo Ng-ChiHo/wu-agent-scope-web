@@ -23,6 +23,10 @@ const inputText = ref('')
 const isLoading = ref(false)
 let currentEventSource = null
 
+// Dashboard
+const showDashboard = ref(false)
+const dashboardUrl = ref('')
+
 // Editing
 const editingId = ref(null)
 const editingName = ref('')
@@ -127,12 +131,31 @@ async function loadMessages(conversationId) {
 function newConversation() {
   activeConversationId.value = null
   messages.value = []
+  showDashboard.value = false
   router.push('/chat')
   focusInput()
 }
 
+// Dashboard
+async function openDashboard() {
+  if (dashboardUrl.value) {
+    showDashboard.value = true
+    return
+  }
+  try {
+    const res = await fetchWithToken('/dashboard/embed')
+    if (res.code === 0) {
+      dashboardUrl.value = res.data
+      showDashboard.value = true
+    }
+  } catch (e) {
+    console.error('获取 Dashboard URL 失败:', e)
+  }
+}
+
 // Select conversation
 function selectConversation(conv) {
+  showDashboard.value = false
   activeConversationId.value = conv.conversationId
   router.push(`/chat/${conv.conversationId}`)
   loadMessages(conv.conversationId)
@@ -327,9 +350,21 @@ onBeforeUnmount(() => {
           </svg>
           Jaeger 链路追踪
         </a>
+        <a href="#" @click.prevent="openDashboard" class="jaeger-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+            <rect x="3" y="12" width="4" height="9" rx="1" />
+            <rect x="10" y="7" width="4" height="14" rx="1" />
+            <rect x="17" y="3" width="4" height="18" rx="1" />
+          </svg>
+          Metabase 数据看板
+        </a>
       </div>
 
       <div class="conversation-list">
+        <div class="conv-section-header" v-if="conversations.length > 0">
+          <span class="conv-section-title">历史会话</span>
+          <span class="conv-section-count">{{ conversations.length }}</span>
+        </div>
         <div
           v-for="conv in conversations"
           :key="conv.conversationId"
@@ -398,6 +433,27 @@ onBeforeUnmount(() => {
 
     <!-- Chat Area -->
     <main class="chat-area">
+      <!-- Dashboard iframe -->
+      <div v-if="showDashboard" class="dashboard-container">
+        <div class="dashboard-header">
+          <button class="back-btn" @click="showDashboard = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            返回对话
+          </button>
+          <span class="dashboard-title">Agent Scope 数据看板</span>
+        </div>
+        <iframe
+          :src="dashboardUrl"
+          frameborder="0"
+          class="dashboard-iframe"
+          allow="clipboard-write"
+        ></iframe>
+      </div>
+
+      <!-- Chat content -->
+      <template v-else>
       <header class="chat-header">
         <div class="header-left">
           <h2 class="chat-title">AGENT SCOPE 2.0</h2>
@@ -486,6 +542,7 @@ onBeforeUnmount(() => {
           </svg>
         </button>
       </div>
+      </template>
     </main>
 
     <!-- Delete confirmation modal -->
@@ -597,6 +654,32 @@ onBeforeUnmount(() => {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+}
+
+.conv-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 6px;
+  margin-bottom: 4px;
+}
+
+.conv-section-title {
+  font-size: 0.7rem;
+  color: rgba(57, 255, 20, 0.35);
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.conv-section-count {
+  font-size: 0.65rem;
+  color: rgba(57, 255, 20, 0.3);
+  font-family: 'Courier New', monospace;
+  background: rgba(57, 255, 20, 0.06);
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(57, 255, 20, 0.08);
 }
 
 .conversation-item {
@@ -1141,5 +1224,55 @@ onBeforeUnmount(() => {
 .modal-btn.confirm:hover {
   background: rgba(255, 80, 80, 0.2);
   box-shadow: 0 0 15px rgba(255, 80, 80, 0.1);
+}
+
+/* Dashboard */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(57, 255, 20, 0.06);
+  border: 1px solid rgba(57, 255, 20, 0.15);
+  border-radius: 2px;
+  color: rgba(57, 255, 20, 0.7);
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.back-btn:hover {
+  background: rgba(57, 255, 20, 0.12);
+  color: #39ff14;
+}
+
+.dashboard-title {
+  color: rgba(57, 255, 20, 0.6);
+  font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
+}
+
+.dashboard-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #7c9184;
 }
 </style>
