@@ -3,7 +3,15 @@ import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch, computed } 
 import { useRouter, useRoute } from 'vue-router'
 import { getUser, apiLogout } from '@/utils/auth'
 import { fetchWithToken, createSseConnection } from '@/utils/fetch'
-import { parseLinks } from '@/utils/linkParser'
+import { renderMarkdown } from '@/utils/markdown'
+
+const URL_REGEX = /(https?:\/\/[^\s<>"')\]]+[^\s<>"')\],.!?:;])/g
+function parseUserText(text) {
+  if (!text) return ''
+  return text.replace(URL_REGEX, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+  })
+}
 
 const router = useRouter()
 const route = useRoute()
@@ -497,7 +505,7 @@ onBeforeUnmount(() => {
             </svg>
           </div>
           <div class="message-body">
-            <div class="message-bubble" v-html="parseLinks(msg.content)"></div>
+            <div class="message-bubble md-body" v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : parseUserText(msg.content)"></div>
             <span class="message-time">{{ formatMessageTime(msg.timestamp) }}</span>
           </div>
         </div>
@@ -1061,6 +1069,195 @@ onBeforeUnmount(() => {
   color: rgba(255, 165, 0, 0.35);
 }
 
+/* Markdown body styles */
+.md-body {
+  white-space: normal;
+  line-height: 1.7;
+}
+
+.md-body :deep(h1),
+.md-body :deep(h2),
+.md-body :deep(h3),
+.md-body :deep(h4),
+.md-body :deep(h5),
+.md-body :deep(h6) {
+  color: #2aad10;
+  font-family: 'Orbitron', sans-serif;
+  margin: 16px 0 8px 0;
+  letter-spacing: 1px;
+}
+
+.md-body :deep(h1) { font-size: 1.3rem; border-bottom: 1px solid rgba(57, 255, 20, 0.15); padding-bottom: 8px; }
+.md-body :deep(h2) { font-size: 1.15rem; border-bottom: 1px solid rgba(57, 255, 20, 0.1); padding-bottom: 6px; }
+.md-body :deep(h3) { font-size: 1.05rem; }
+.md-body :deep(h4) { font-size: 0.95rem; }
+
+.md-body :deep(p) {
+  margin: 8px 0;
+}
+
+.md-body :deep(a) {
+  color: #2aad10;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md-body :deep(a:hover) {
+  color: #39ff14;
+}
+
+.md-body :deep(strong) {
+  color: #b8d0b8;
+  font-weight: 700;
+}
+
+.md-body :deep(em) {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.md-body :deep(del) {
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: line-through;
+}
+
+.md-body :deep(code):not(.hljs) {
+  background: rgba(57, 255, 20, 0.06);
+  border: 1px solid rgba(57, 255, 20, 0.08);
+  border-radius: 2px;
+  padding: 1px 6px;
+  font-size: 0.85em;
+  color: #2aad10;
+  font-family: 'Courier New', monospace;
+}
+
+.md-body :deep(.code-block) {
+  margin: 12px 0;
+  border: 1px solid rgba(57, 255, 20, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.md-body :deep(.code-header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(57, 255, 20, 0.06);
+  border-bottom: 1px solid rgba(57, 255, 20, 0.1);
+}
+
+.md-body :deep(.code-lang) {
+  font-size: 0.7rem;
+  color: rgba(57, 255, 20, 0.4);
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
+.md-body :deep(.copy-btn) {
+  background: rgba(57, 255, 20, 0.06);
+  border: 1px solid rgba(57, 255, 20, 0.1);
+  border-radius: 2px;
+  color: rgba(57, 255, 20, 0.45);
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s;
+}
+
+.md-body :deep(.copy-btn:hover) {
+  background: rgba(57, 255, 20, 0.12);
+  color: #2aad10;
+}
+
+.md-body :deep(pre) {
+  margin: 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  overflow-x: auto;
+}
+
+.md-body :deep(pre code.hljs) {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.md-body :deep(blockquote) {
+  margin: 10px 0;
+  padding: 8px 16px;
+  border-left: 3px solid rgba(255, 165, 0, 0.4);
+  background: rgba(255, 165, 0, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.md-body :deep(blockquote p) {
+  margin: 4px 0;
+}
+
+.md-body :deep(ul),
+.md-body :deep(ol) {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.md-body :deep(li) {
+  margin: 4px 0;
+}
+
+.md-body :deep(li::marker) {
+  color: rgba(57, 255, 20, 0.35);
+}
+
+.md-body :deep(.table-wrapper) {
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.md-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.md-body :deep(th) {
+  background: rgba(57, 255, 20, 0.04);
+  color: #2aad10;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid rgba(57, 255, 20, 0.08);
+}
+
+.md-body :deep(td) {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.md-body :deep(tr:hover td) {
+  background: rgba(57, 255, 20, 0.02);
+}
+
+.md-body :deep(hr) {
+  border: none;
+  border-top: 1px solid rgba(57, 255, 20, 0.1);
+  margin: 16px 0;
+}
+
+.md-body :deep(img) {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.md-body :deep(input[type="checkbox"]) {
+  margin-right: 6px;
+  accent-color: #39ff14;
+}
+
 /* Typing indicator */
 .typing-indicator {
   display: flex;
@@ -1273,6 +1470,6 @@ onBeforeUnmount(() => {
   flex: 1;
   width: 100%;
   border: none;
-  background: #7c9184;
+  background: #f1f5ddc5;
 }
 </style>

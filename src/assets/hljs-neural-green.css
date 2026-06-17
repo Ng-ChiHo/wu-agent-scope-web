@@ -1,0 +1,85 @@
+/* Neural Green - highlight.js theme */
+.hljs {
+  color: #a8b5a0;
+  background: transparent;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #556b55;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-type {
+  color: #5c9c5c;
+}
+
+.hljs-literal,
+.hljs-number,
+.hljs-tag .hljs-attr,
+.hljs-template-variable,
+.hljs-variable {
+  color: #7ab87a;
+}
+
+.hljs-string,
+.hljs-doctag,
+.hljs-regexp {
+  color: #6a9955;
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-section,
+.hljs-selector-id {
+  color: #39ff14;
+  font-weight: 600;
+}
+
+.hljs-subst {
+  color: #a8b5a0;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #5c9c5c;
+}
+
+.hljs-link,
+.hljs-meta,
+.hljs-selector-class {
+  color: #5c9c5c;
+}
+
+.hljs-built_in,
+.hljs-name {
+  color: #4ec94e;
+}
+
+.hljs-attr {
+  color: #7ab87a;
+}
+
+.hljs-params {
+  color: #a8b5a0;
+}
+
+.hljs-addition {
+  color: #39ff14;
+  background: rgba(57, 255, 20, 0.06);
+}
+
+.hljs-deletion {
+  color: #cc4444;
+  background: rgba(204, 68, 68, 0.06);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
