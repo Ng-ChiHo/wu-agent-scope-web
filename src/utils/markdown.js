@@ -97,6 +97,6 @@ export function renderMarkdown(text) {
   const html = marked.parse(text)
   return DOMPurify.sanitize(html, {
     ADD_TAGS: ['button'],
-    ADD_ATTR: ['onclick', 'class']
+    ADD_ATTR: ['onclick', 'class', 'target', 'rel']
   })
 }
