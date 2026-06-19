@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getUser, apiLogout } from '@/utils/auth'
-import { fetchWithToken, createSseConnection } from '@/utils/fetch'
+import { fetchWithToken, createSseConnection, fetchSsePost } from '@/utils/fetch'
 import { renderMarkdown } from '@/utils/markdown'
 
 const URL_REGEX = /(https?:\/\/[^\s<>"')\]]+[^\s<>"')\],.!?:;])/g
@@ -30,6 +30,21 @@ const messages = ref([])
 const inputText = ref('')
 const isLoading = ref(false)
 let currentEventSource = null
+let currentSseRequest = null
+
+// Models
+const availableModels = ref([])
+const selectedModelId = ref('')
+
+// Images
+const attachedImages = ref([]) // { base64, mimeType, previewUrl }
+const fileInputRef = ref(null)
+
+// 判断当前模型是否支持 vision
+const isVisionModel = computed(() => {
+  const model = availableModels.value.find(m => m.id === selectedModelId.value)
+  return model?.capabilities?.includes('vision') || false
+})
 
 // Dashboard
 const showDashboard = ref(false)
@@ -117,6 +132,23 @@ async function loadConversations() {
   }
 }
 
+// Load available models
+async function loadModels() {
+  try {
+    const res = await fetchWithToken('/ai/models')
+    if (res.code === 0 && res.data) {
+      availableModels.value = res.data
+      // If no model selected yet, use default
+      if (!selectedModelId.value && res.data.length > 0) {
+        const defaultModel = res.data.find(m => m.id === 'qwen2.5:14b') || res.data[0]
+        selectedModelId.value = defaultModel.id
+      }
+    }
+  } catch (e) {
+    console.error('加载模型列表失败:', e)
+  }
+}
+
 // Load messages for a conversation
 async function loadMessages(conversationId) {
   try {
@@ -125,7 +157,8 @@ async function loadMessages(conversationId) {
       messages.value = (res.data || []).map(m => ({
         role: m.role,
         content: m.content,
-        timestamp: m.timestamp
+        timestamp: m.timestamp,
+        images: m.imageUrls || undefined
       }))
       scrollToBottom()
       focusInput()
@@ -167,12 +200,82 @@ function selectConversation(conv) {
   activeConversationId.value = conv.conversationId
   router.push(`/chat/${conv.conversationId}`)
   loadMessages(conv.conversationId)
+  // Restore last used model for this conversation
+  if (conv.lastModelId) {
+    selectedModelId.value = conv.lastModelId
+  }
+}
+
+// ==================== 图片处理 ====================
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function handleImageUpload(event) {
+  const files = event.target.files
+  if (!files) return
+
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue
+    if (file.size > 20 * 1024 * 1024) { // 20MB limit
+      console.warn('图片过大，跳过:', file.name)
+      continue
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const dataUrl = e.target.result
+      // 提取 base64 部分（去掉 data:image/xxx;base64, 前缀）
+      const base64 = dataUrl.split(',')[1]
+      attachedImages.value.push({
+        base64,
+        mimeType: file.type,
+        previewUrl: dataUrl
+      })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // 清空 input 以允许重复选择同一文件
+  event.target.value = ''
+}
+
+function removeImage(index) {
+  attachedImages.value.splice(index, 1)
+}
+
+// 剪贴板粘贴图片
+function handlePaste(event) {
+  const items = event.clipboardData?.items
+  if (!items) return
+
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      event.preventDefault()
+      const file = item.getAsFile()
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const dataUrl = e.target.result
+          const base64 = dataUrl.split(',')[1]
+          attachedImages.value.push({
+            base64,
+            mimeType: file.type,
+            previewUrl: dataUrl
+          })
+        }
+        reader.readAsDataURL(file)
+      }
+      break
+    }
+  }
 }
 
 // Send message via SSE
 function sendMessage() {
   const text = inputText.value.trim()
-  if (!text || isLoading.value) return
+  if ((!text && attachedImages.value.length === 0) || isLoading.value) return
 
   const chatId = activeConversationId.value || generateChatId()
   if (!activeConversationId.value) {
@@ -180,13 +283,19 @@ function sendMessage() {
     router.push(`/chat/${chatId}`)
   }
 
-  // Add user message
+  // Save images before clearing
+  const imagesToSend = [...attachedImages.value]
+  const hasImages = imagesToSend.length > 0
+
+  // Add user message (with image previews)
   messages.value.push({
     role: 'user',
     content: text,
+    images: hasImages ? imagesToSend.map(img => img.previewUrl) : undefined,
     timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
   })
   inputText.value = ''
+  attachedImages.value = []
   resetTextareaHeight()
   scrollToBottom()
 
@@ -201,37 +310,75 @@ function sendMessage() {
   isLoading.value = true
   let fullResponse = ''
 
-  const encodedMsg = encodeURIComponent(text)
-  const url = `/ai/chat/common/sse?message=${encodedMsg}&chatId=${encodeURIComponent(chatId)}`
+  if (hasImages) {
+    // POST SSE: 有图片时使用 POST 方式
+    const body = {
+      message: text,
+      chatId: chatId,
+      modelId: selectedModelId.value,
+      images: imagesToSend.map(img => ({
+        base64: img.base64,
+        mimeType: img.mimeType
+      }))
+    }
 
-  currentEventSource = createSseConnection(url)
+    currentSseRequest = fetchSsePost('/ai/chat/common/sse', body,
+      (data) => {
+        fullResponse += data
+        messages.value[aiMsgIndex].content = fullResponse
+        scrollToBottom()
+      },
+      () => {
+        currentSseRequest = null
+        isLoading.value = false
+        loadConversations()
+        scrollToBottom()
+        focusInput()
+      },
+      (err) => {
+        currentSseRequest = null
+        isLoading.value = false
+        if (!fullResponse) {
+          messages.value[aiMsgIndex].content = '⚠ 连接中断，请重试'
+        }
+        loadConversations()
+        focusInput()
+      }
+    )
+  } else {
+    // GET SSE: 纯文本时使用原有 EventSource 方式
+    const encodedMsg = encodeURIComponent(text)
+    const url = `/ai/chat/common/sse?message=${encodedMsg}&chatId=${encodeURIComponent(chatId)}`
 
-  currentEventSource.onmessage = (event) => {
-    fullResponse += event.data
-    messages.value[aiMsgIndex].content = fullResponse
-    scrollToBottom()
-  }
+    currentEventSource = createSseConnection(url, { modelId: selectedModelId.value })
 
-  currentEventSource.addEventListener('close', () => {
-    currentEventSource.close()
-    currentEventSource = null
-    isLoading.value = false
-    loadConversations()
-    scrollToBottom()
-    focusInput()
-  })
+    currentEventSource.onmessage = (event) => {
+      fullResponse += event.data
+      messages.value[aiMsgIndex].content = fullResponse
+      scrollToBottom()
+    }
 
-  currentEventSource.onerror = () => {
-    if (currentEventSource) {
+    currentEventSource.addEventListener('close', () => {
       currentEventSource.close()
       currentEventSource = null
+      isLoading.value = false
+      loadConversations()
+      scrollToBottom()
+      focusInput()
+    })
+
+    currentEventSource.onerror = () => {
+      if (currentEventSource) {
+        currentEventSource.close()
+        currentEventSource = null
+      }
+      isLoading.value = false
+      if (!fullResponse) {
+        messages.value[aiMsgIndex].content = '⚠ 连接中断，请重试'
+      }
+      loadConversations()
+      focusInput()
     }
-    isLoading.value = false
-    if (!fullResponse) {
-      messages.value[aiMsgIndex].content = '⚠ 连接中断，请重试'
-    }
-    loadConversations()
-    focusInput()
   }
 }
 
@@ -325,10 +472,14 @@ function startDrag(e) {
 }
 
 onMounted(async () => {
-  await loadConversations()
+  await Promise.all([loadConversations(), loadModels()])
   const chatId = route.params.chatId
   if (chatId) {
     activeConversationId.value = chatId
+    const conv = conversations.value.find(c => c.conversationId === chatId)
+    if (conv?.lastModelId) {
+      selectedModelId.value = conv.lastModelId
+    }
     await loadMessages(chatId)
   }
 })
@@ -337,6 +488,10 @@ onBeforeUnmount(() => {
   if (currentEventSource) {
     currentEventSource.close()
     currentEventSource = null
+  }
+  if (currentSseRequest) {
+    currentSseRequest.abort()
+    currentSseRequest = null
   }
 })
 </script>
@@ -356,7 +511,7 @@ onBeforeUnmount(() => {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
-          Jaeger 链路追踪
+          系统应用链路追踪
         </a>
         <a href="#" @click.prevent="openDashboard" class="jaeger-link">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
@@ -364,7 +519,7 @@ onBeforeUnmount(() => {
             <rect x="10" y="7" width="4" height="14" rx="1" />
             <rect x="17" y="3" width="4" height="18" rx="1" />
           </svg>
-          Metabase 数据看板
+          模型用量数据看板
         </a>
       </div>
 
@@ -450,7 +605,7 @@ onBeforeUnmount(() => {
             </svg>
             返回对话
           </button>
-          <span class="dashboard-title">Agent Scope 数据看板</span>
+          <span class="dashboard-title">系统Agent Scope 2.0数据看板</span>
         </div>
         <iframe
           :src="dashboardUrl"
@@ -506,6 +661,9 @@ onBeforeUnmount(() => {
           </div>
           <div class="message-body">
             <div class="message-bubble md-body" v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : parseUserText(msg.content)"></div>
+            <div v-if="msg.images && msg.images.length > 0" class="message-images">
+              <img v-for="(imgUrl, imgIdx) in msg.images" :key="imgIdx" :src="imgUrl" class="message-image-thumb" />
+            </div>
             <span class="message-time">{{ formatMessageTime(msg.timestamp) }}</span>
           </div>
         </div>
@@ -529,20 +687,70 @@ onBeforeUnmount(() => {
 
       <!-- Input Area -->
       <div class="chat-input-area">
+        <!-- Image preview bar -->
+        <div v-if="attachedImages.length > 0" class="image-preview-bar">
+          <div v-for="(img, index) in attachedImages" :key="index" class="image-preview-item">
+            <img :src="img.previewUrl" class="image-preview-thumb" />
+            <button class="image-remove-btn" @click="removeImage(index)" title="移除">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="model-selector-wrapper">
+          <select
+            v-model="selectedModelId"
+            class="model-select"
+            :disabled="isLoading"
+            title="选择模型"
+          >
+            <option
+              v-for="m in availableModels"
+              :key="m.id"
+              :value="m.id"
+            >{{ m.displayName || m.id }}</option>
+          </select>
+          <span v-if="isVisionModel" class="vision-badge" title="支持图片输入">👁</span>
+        </div>
+        <!-- Hidden file input -->
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          multiple
+          style="display: none"
+          @change="handleImageUpload"
+        />
+        <!-- Image upload button -->
+        <button
+          v-if="isVisionModel"
+          class="image-upload-btn"
+          @click="triggerFileInput"
+          :disabled="isLoading"
+          title="上传图片"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </button>
         <textarea
           ref="inputRef"
           v-model="inputText"
           class="chat-input"
-          placeholder="请输入你的聊天内容... (Enter 发送, Shift+Enter 换行)"
+          :placeholder="isVisionModel ? '输入文字或粘贴图片... (Enter 发送)' : '请输入你的聊天内容... (Enter 发送, Shift+Enter 换行)'"
           @input="autoResize"
           @keydown="handleKeydown"
+          @paste="isVisionModel ? handlePaste($event) : null"
           :disabled="isLoading"
           rows="1"
         ></textarea>
         <button
           class="send-btn"
           @click="sendMessage"
-          :disabled="!inputText.trim() || isLoading"
+          :disabled="(!inputText.trim() && attachedImages.length === 0) || isLoading"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
             <line x1="22" y1="2" x2="11" y2="13" />
@@ -1072,6 +1280,7 @@ onBeforeUnmount(() => {
 /* Markdown body styles */
 .md-body {
   white-space: normal;
+  word-break: break-word;
   line-height: 1.7;
 }
 
@@ -1297,6 +1506,47 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+/* Model Selector */
+.model-selector-wrapper {
+  flex-shrink: 0;
+}
+
+.model-select {
+  height: 44px;
+  padding: 0 12px;
+  background: rgba(57, 255, 20, 0.04);
+  border: 1px solid rgba(57, 255, 20, 0.15);
+  border-radius: 2px;
+  color: rgba(57, 255, 20, 0.7);
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2339ff14' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+.model-select:hover {
+  border-color: rgba(57, 255, 20, 0.4);
+  background-color: rgba(57, 255, 20, 0.08);
+}
+
+.model-select:focus {
+  border-color: rgba(57, 255, 20, 0.5);
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.08);
+}
+
+.model-select option {
+  background: #0a1020;
+  color: #e0ffe0;
+  padding: 8px;
+}
+
 .chat-input {
   flex: 1;
   min-height: 44px;
@@ -1347,6 +1597,105 @@ onBeforeUnmount(() => {
 .send-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* Vision badge */
+.vision-badge {
+  font-size: 0.75rem;
+  margin-left: 4px;
+  cursor: help;
+}
+
+/* Image upload button */
+.image-upload-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 2px;
+  border: 1px solid rgba(57, 255, 20, 0.15);
+  background: transparent;
+  color: rgba(57, 255, 20, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.image-upload-btn:hover:not(:disabled) {
+  color: #39ff14;
+  border-color: rgba(57, 255, 20, 0.4);
+  background: rgba(57, 255, 20, 0.08);
+}
+
+.image-upload-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Image preview bar */
+.image-preview-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
+}
+
+.image-preview-item {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.image-preview-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(57, 255, 20, 0.15);
+}
+
+.image-remove-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 60, 60, 0.8);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.image-remove-btn:hover {
+  background: rgba(255, 60, 60, 1);
+}
+
+/* Message images */
+.message-images {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.message-image-thumb {
+  max-width: 200px;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid rgba(57, 255, 20, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.message-image-thumb:hover {
+  transform: scale(1.02);
 }
 
 /* Delete Modal */
