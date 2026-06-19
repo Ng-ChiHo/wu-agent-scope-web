@@ -94,9 +94,14 @@ function escapeHtml(str) {
  */
 export function renderMarkdown(text) {
   if (!text) return ''
-  const html = marked.parse(text)
-  return DOMPurify.sanitize(html, {
-    ADD_TAGS: ['button'],
-    ADD_ATTR: ['onclick', 'class', 'target', 'rel']
-  })
+  try {
+    const html = marked.parse(text)
+    return DOMPurify.sanitize(html, {
+      ADD_TAGS: ['button'],
+      ADD_ATTR: ['onclick', 'class', 'target', 'rel']
+    })
+  } catch {
+    // 流式传输中 partial markdown 可能解析失败，降级为纯文本
+    return DOMPurify.sanitize(text.replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+  }
 }

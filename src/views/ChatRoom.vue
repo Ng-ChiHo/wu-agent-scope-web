@@ -29,6 +29,7 @@ const activeConversationId = ref(null)
 const messages = ref([])
 const inputText = ref('')
 const isLoading = ref(false)
+const isLoadingMessages = ref(false) // 会话消息加载中
 let currentEventSource = null
 let currentSseRequest = null
 
@@ -149,17 +150,39 @@ async function loadModels() {
   }
 }
 
+// 从 content 中提取可展示的文本
+function extractTextContent(content) {
+  // 字符串类型（USER 消息常见）
+  if (typeof content === 'string') return content
+  // 数组类型（ASSISTANT 消息：混合 text / tool_use）
+  if (Array.isArray(content)) {
+    return content
+      .filter(item => item.type === 'text' && item.text)
+      .map(item => item.text)
+      .join('\n')
+  }
+  return ''
+}
+
 // Load messages for a conversation
 async function loadMessages(conversationId) {
   try {
     const res = await fetchWithToken(`/chat/conversation/messages?conversationId=${conversationId}`)
     if (res.code === 0) {
-      messages.value = (res.data || []).map(m => ({
-        role: m.role,
-        content: m.content,
-        timestamp: m.timestamp,
-        images: m.imageUrls || undefined
-      }))
+      messages.value = (res.data || [])
+        .filter(m => {
+          const role = (m.role || '').toLowerCase()
+          if (role !== 'user' && role !== 'assistant') return false
+          // 过滤掉只有 tool_use、没有 text 的 assistant 消息
+          const text = extractTextContent(m.content)
+          return text.trim() !== ''
+        })
+        .map(m => ({
+          role: m.role.toLowerCase(),
+          content: extractTextContent(m.content),
+          timestamp: m.timestamp,
+          images: m.imageUrls || undefined
+        }))
       scrollToBottom()
       focusInput()
     }
@@ -195,15 +218,19 @@ async function openDashboard() {
 }
 
 // Select conversation
-function selectConversation(conv) {
+async function selectConversation(conv) {
   showDashboard.value = false
   activeConversationId.value = conv.conversationId
   router.push(`/chat/${conv.conversationId}`)
-  loadMessages(conv.conversationId)
+  isLoadingMessages.value = true
   // Restore last used model for this conversation
   if (conv.lastModelId) {
     selectedModelId.value = conv.lastModelId
   }
+  await loadMessages(conv.conversationId)
+  isLoadingMessages.value = false
+  await nextTick()
+  scrollToBottom()
 }
 
 // ==================== 图片处理 ====================
@@ -272,6 +299,13 @@ function handlePaste(event) {
   }
 }
 
+// 生成本地时间字符串（与后端返回格式一致：YYYY-MM-DD HH:mm:ss）
+function localTimestamp() {
+  const d = new Date()
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 // Send message via SSE
 function sendMessage() {
   const text = inputText.value.trim()
@@ -292,7 +326,7 @@ function sendMessage() {
     role: 'user',
     content: text,
     images: hasImages ? imagesToSend.map(img => img.previewUrl) : undefined,
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    timestamp: localTimestamp()
   })
   inputText.value = ''
   attachedImages.value = []
@@ -304,7 +338,7 @@ function sendMessage() {
   messages.value.push({
     role: 'assistant',
     content: '',
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    timestamp: localTimestamp()
   })
 
   isLoading.value = true
@@ -332,6 +366,10 @@ function sendMessage() {
         currentSseRequest = null
         isLoading.value = false
         loadConversations()
+        // POST SSE 不保留换行，重新加载消息以获取正确 markdown 格式
+        if (activeConversationId.value) {
+          loadMessages(activeConversationId.value)
+        }
         scrollToBottom()
         focusInput()
       },
@@ -480,7 +518,11 @@ onMounted(async () => {
     if (conv?.lastModelId) {
       selectedModelId.value = conv.lastModelId
     }
+    isLoadingMessages.value = true
     await loadMessages(chatId)
+    isLoadingMessages.value = false
+    await nextTick()
+    scrollToBottom()
   }
 })
 
@@ -628,7 +670,20 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <div class="chat-messages" ref="chatMessagesRef">
+      <!-- Conversation loading state -->
+      <div v-if="isLoadingMessages" class="loading-container">
+        <div class="loading-content">
+          <div class="loading-spinner-ring">
+            <div class="ring-segment" v-for="i in 8" :key="i" :style="{ transform: `rotate(${i * 45}deg)` }"></div>
+          </div>
+          <span class="loading-text">LOADING MESSAGES</span>
+          <div class="loading-bar">
+            <div class="loading-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="chat-messages" ref="chatMessagesRef">
         <!-- Welcome state -->
         <div v-if="messages.length === 0" class="welcome-state">
           <div class="welcome-icon">
@@ -645,7 +700,7 @@ onBeforeUnmount(() => {
         <!-- Messages -->
         <div
           v-for="(msg, index) in messages"
-          :key="index"
+          :key="msg.role === 'assistant' ? `${index}-${msg.content.length}` : index"
           :class="['message', msg.role]"
         >
           <div class="message-avatar">
@@ -1144,6 +1199,89 @@ onBeforeUnmount(() => {
   font-size: 0.8rem;
   color: rgba(57, 255, 20, 0.5);
   font-family: 'Courier New', monospace;
+}
+
+/* Conversation loading */
+.loading-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #060a16 0%, #0a1020 50%, #0d1a2d 100%);
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner-ring {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.ring-segment {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 3px;
+  height: 12px;
+  margin-left: -1.5px;
+  background: rgba(57, 255, 20, 0.15);
+  transform-origin: center 24px;
+  border-radius: 1px;
+  animation: ringPulse 1.2s ease-in-out infinite;
+}
+
+.ring-segment:nth-child(1) { animation-delay: 0s; }
+.ring-segment:nth-child(2) { animation-delay: 0.15s; }
+.ring-segment:nth-child(3) { animation-delay: 0.3s; }
+.ring-segment:nth-child(4) { animation-delay: 0.45s; }
+.ring-segment:nth-child(5) { animation-delay: 0.6s; }
+.ring-segment:nth-child(6) { animation-delay: 0.75s; }
+.ring-segment:nth-child(7) { animation-delay: 0.9s; }
+.ring-segment:nth-child(8) { animation-delay: 1.05s; }
+
+@keyframes ringPulse {
+  0%, 100% { background: rgba(57, 255, 20, 0.15); height: 12px; }
+  50% { background: #39ff14; height: 18px; box-shadow: 0 0 8px rgba(57, 255, 20, 0.4); }
+}
+
+.loading-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  color: rgba(57, 255, 20, 0.4);
+  letter-spacing: 4px;
+  animation: textFlicker 2s ease-in-out infinite;
+}
+
+@keyframes textFlicker {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.loading-bar {
+  width: 200px;
+  height: 2px;
+  background: rgba(57, 255, 20, 0.08);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.loading-bar-fill {
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #39ff14, transparent);
+  border-radius: 1px;
+  animation: barSweep 1.5s ease-in-out infinite;
+}
+
+@keyframes barSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
 }
 
 /* Messages */
