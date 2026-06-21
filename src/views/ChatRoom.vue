@@ -401,6 +401,10 @@ function sendMessage() {
       currentEventSource = null
       isLoading.value = false
       loadConversations()
+      // SSE 流结束后重新加载消息，确保 markdown 格式正确
+      if (activeConversationId.value) {
+        loadMessages(activeConversationId.value)
+      }
       scrollToBottom()
       focusInput()
     })
@@ -700,7 +704,7 @@ onBeforeUnmount(() => {
         <!-- Messages -->
         <div
           v-for="(msg, index) in messages"
-          :key="msg.role === 'assistant' ? `${index}-${msg.content.length}` : index"
+          :key="index"
           :class="['message', msg.role]"
         >
           <div class="message-avatar">
