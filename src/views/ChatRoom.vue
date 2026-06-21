@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { getUser, apiLogout } from '@/utils/auth'
 import { fetchWithToken, createSseConnection, fetchSsePost } from '@/utils/fetch'
 import { renderMarkdown } from '@/utils/markdown'
+import EChart from '@/components/EChart.vue'
 
 const URL_REGEX = /(https?:\/\/[^\s<>"')\]]+[^\s<>"')\],.!?:;])/g
 function parseUserText(text) {
@@ -150,6 +151,16 @@ async function loadModels() {
   }
 }
 
+// 解析图表数据：兼容后端返回的 {chartType, title, echartsOption} 格式
+function parseChartData(chartDataStr) {
+  try {
+    const data = typeof chartDataStr === 'string' ? JSON.parse(chartDataStr) : chartDataStr
+    return data.echartsOption || data
+  } catch {
+    return {}
+  }
+}
+
 // 从 content 中提取可展示的文本
 function extractTextContent(content) {
   // 字符串类型（USER 消息常见）
@@ -181,7 +192,8 @@ async function loadMessages(conversationId) {
           role: m.role.toLowerCase(),
           content: extractTextContent(m.content),
           timestamp: m.timestamp,
-          images: m.imageUrls || undefined
+          images: m.imageUrls || undefined,
+          chartData: m.chartData || undefined
         }))
       scrollToBottom()
       focusInput()
@@ -720,6 +732,9 @@ onBeforeUnmount(() => {
           </div>
           <div class="message-body">
             <div class="message-bubble md-body" v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : parseUserText(msg.content)"></div>
+            <div v-if="msg.chartData" class="message-chart">
+              <EChart :option="parseChartData(msg.chartData)" height="350px" />
+            </div>
             <div v-if="msg.images && msg.images.length > 0" class="message-images">
               <img v-for="(imgUrl, imgIdx) in msg.images" :key="imgIdx" :src="imgUrl" class="message-image-thumb" />
             </div>
@@ -1816,6 +1831,17 @@ onBeforeUnmount(() => {
 
 .image-remove-btn:hover {
   background: rgba(255, 60, 60, 1);
+}
+
+/* Message chart */
+.message-chart {
+  width: 100%;
+  max-width: 700px;
+  margin-top: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #1e1e2e;
+  padding: 12px;
 }
 
 /* Message images */
