@@ -14,11 +14,11 @@ let drops = []
 
 // Terminal boot log
 const bootLines = [
-  { text: '> INITIALIZING NEURAL INTERFACE v2.0...', delay: 0, color: 'green' },
-  { text: '> Loading model: qwen2.5:14b [OK]', delay: 600, color: 'green' },
+  { text: '> INITIALIZING WU·AGENT INTERFACE v2.0...', delay: 0, color: 'green' },
+  { text: '> Loading model: qwen3:14b [OK]', delay: 600, color: 'green' },
   { text: '> Loading model: deepseek-r1:14b [OK]', delay: 1200, color: 'green' },
   { text: '> Vision module: ACTIVE', delay: 1800, color: 'amber' },
-  { text: '> SSE stream connected: wss://agentapi.xpeak.top', delay: 2400, color: 'green' },
+  { text: '> SSE stream connected: wss://agent.xpeak.top', delay: 2400, color: 'green' },
   { text: '> Tool execution engine: READY', delay: 3000, color: 'green' },
   { text: '> Markdown renderer: HIGHLIGHT.JS + DOMPURIFY', delay: 3600, color: 'dim' },
   { text: '> ECharts visualization: LOADED', delay: 4200, color: 'dim' },
@@ -34,29 +34,43 @@ const features = [
     id: '01',
     title: '多模型协同',
     subtitle: 'MULTI-MODEL ORCHESTRATION',
-    desc: '自由切换 Qwen、DeepSeek 等多种大语言模型。每个模型各有所长——推理、创作、代码、分析，按需调度，精准匹配任务场景。',
+    desc: '自由切换 Qwen、DeepSeek 等多种大语言模型。每个模型各有所长 —— 推理、视觉、代码、分析，按需调度，精准匹配任务场景。',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714a2.25 2.25 0 0 0 .659 1.591L19 14.5m-4.75-11.396c.251.023.501.05.75.082M12 21a8.966 8.966 0 0 0 5.982-2.275M12 21a8.966 8.966 0 0 1-5.982-2.275M15.75 3.104a24.297 24.297 0 0 1 3.248.18M8.25 3.104a24.297 24.297 0 0 0-3.248.18" /></svg>`,
   },
   {
     id: '02',
     title: '视觉理解',
     subtitle: 'VISION PERCEPTION',
-    desc: '支持图片上传与粘贴，模型可直接解析视觉内容。截图分析、图表解读、设计评审——对话不再局限于纯文本。',
+    desc: '支持图片上传与粘贴，模型可直接解析视觉内容。截图分析、图表解读、设计评审 —— 对话不再局限于纯文本。',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>`,
   },
   {
     id: '03',
     title: '实时流式输出',
     subtitle: 'REAL-TIME SSE STREAMING',
-    desc: '基于 Server-Sent Events 的流式架构，逐字输出 AI 响应。支持 GET/POST 双模式 SSE，多模态消息实时传输，延迟极低。',
+    desc: '基于 Server-Sent Events 的流式架构，逐字输出 AI 响应。支持 GET/POST 双模式 SSE，多模态消息实时传输，延迟降低。',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" /></svg>`,
   },
   {
     id: '04',
     title: '工具调用链',
     subtitle: 'TOOL USE CHAIN',
-    desc: '模型可自主调用外部工具并执行多步推理。从数据查询到代码执行，AI 不再只是对话——它是能行动的智能体。',
+    desc: '模型可自主调用外部工具，渐进式加载多种 Skills 并执行多步推理。从数据查询到图表可视化，AI 不再只是对话 —— 它是能行动的智能体。',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.653-4.655m5.914-3.09A6.717 6.717 0 0 1 18 9c.338 0 .672.017 1 .05M5.12 9.35A6.717 6.717 0 0 0 6 9c.338 0 .672.017 1 .05" /></svg>`,
+  },
+  {
+    id: '05',
+    title: '调用日志追踪',
+    subtitle: 'DISTRIBUTED TRACING',
+    desc: '集成 Jaeger 分布式追踪框架，完整记录每次模型调用链路。从请求发起到工具执行再到最终响应，全链路 Span 可视化，帮助定位性能瓶颈与异常节点。',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" /></svg>`,
+  },
+  {
+    id: '06',
+    title: '模型可观测性',
+    subtitle: 'MODEL OBSERVABILITY',
+    desc: '基于 Metabase 构建多维度数据看板，实时统计模型调用量、响应延迟、Token 消耗与工具调用分布。按模型、用户、时段等多维交叉分析，让每一次推理都有据可查。',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" /></svg>`,
   },
 ]
 
@@ -149,7 +163,7 @@ onBeforeUnmount(() => {
     <!-- Fixed nav bar -->
     <nav :class="['nav', { scrolled }]">
       <div class="nav-inner">
-        <span class="nav-logo">AGENT<span class="nav-logo-dot">SCOPE</span></span>
+        <span class="nav-logo">WU·<span class="nav-logo-dot">AGENT</span></span>
         <button class="nav-cta" @click="enterSystem">
           <span class="btn-bracket">[</span> 进入系统 <span class="btn-bracket">]</span>
         </button>
@@ -164,11 +178,11 @@ onBeforeUnmount(() => {
           NEURAL INTERFACE v2.0
         </div>
 
-        <h1 class="glitch-title" data-text="AGENT SCOPE">AGENT SCOPE</h1>
+        <h1 class="glitch-title" data-text="WU·AGENT">WU·AGENT</h1>
 
         <p class="hero-subtitle">
-          多模型 AI 智能体对话终端<br>
-          <span class="hero-subtitle-dim">支持视觉理解 · 工具调用 · 实时流式输出</span>
+          多模型 AI 智能体客户端<br>
+          <span class="hero-subtitle-dim">支持模型切换 · 视觉理解 · 工具调用 · 实时流式输出 · 数据可视化</span>
         </p>
 
         <!-- Terminal boot window -->
@@ -196,7 +210,7 @@ onBeforeUnmount(() => {
 
         <button class="hero-cta" @click="enterSystem">
           <span class="cta-bracket">&gt;</span>
-          进入 Agent Scope
+          进入 WU·AGENT
           <span class="cta-bracket">&lt;</span>
         </button>
       </div>
@@ -265,7 +279,7 @@ onBeforeUnmount(() => {
     <section class="cta-section">
       <div class="cta-content">
         <p class="cta-label">// SYSTEM ACCESS</p>
-        <h2 class="cta-title">准备好接入神经网络了吗？</h2>
+        <h2 class="cta-title">准备好接入WU·AGENT了吗？</h2>
         <p class="cta-desc">使用体验账号 demo / 654321 快速体验，或注册你自己的账号。</p>
         <button class="hero-cta" @click="enterSystem">
           <span class="cta-bracket">&gt;</span>
@@ -276,7 +290,7 @@ onBeforeUnmount(() => {
     </section>
 
     <footer class="footer">
-      &copy; 2026 AGENT SCOPE // NEURAL INTERFACE v2.0
+      &copy; 2026 WU·AGENT // NEURAL INTERFACE v2.0
     </footer>
   </div>
 </template>
@@ -679,7 +693,7 @@ onBeforeUnmount(() => {
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
@@ -896,6 +910,12 @@ onBeforeUnmount(() => {
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .feature-grid {
     grid-template-columns: 1fr;
