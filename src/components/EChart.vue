@@ -15,34 +15,41 @@ const chartRef = ref(null)
 const chartInstance = shallowRef(null)
 let observer = null
 
-function tryInit() {
-  if (chartInstance.value || !chartRef.value) return
+function ensureInit() {
+  if (chartInstance.value) return true
+  if (!chartRef.value) return false
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) return false
   chartInstance.value = echarts.init(chartRef.value)
-  if (props.option && Object.keys(props.option).length > 0) {
-    chartInstance.value.setOption(props.option)
-  }
   window.addEventListener('resize', handleResize)
   return true
 }
 
+function applyOption(option) {
+  if (!option || !option.series || option.series.length === 0) return
+  if (chartInstance.value) {
+    chartInstance.value.setOption(option, true)
+  }
+}
+
 onMounted(() => {
-  if (!tryInit()) {
+  if (!ensureInit()) {
     observer = new ResizeObserver(() => {
-      if (tryInit()) {
+      if (ensureInit()) {
         observer?.disconnect()
         observer = null
+        applyOption(props.option)
       }
     })
     observer.observe(chartRef.value)
+  } else {
+    applyOption(props.option)
   }
 })
 
 watch(() => props.option, (newOption) => {
-  if (!tryInit()) return
-  if (newOption && Object.keys(newOption).length > 0) {
-    chartInstance.value.setOption(newOption, true)
+  if (ensureInit()) {
+    applyOption(newOption)
   }
 }, { deep: true })
 

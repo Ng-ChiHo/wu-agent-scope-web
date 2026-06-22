@@ -155,9 +155,14 @@ async function loadModels() {
 function parseChartData(chartDataStr) {
   try {
     const data = typeof chartDataStr === 'string' ? JSON.parse(chartDataStr) : chartDataStr
-    return data.echartsOption || data
+    const option = data.echartsOption || data
+    if (!option || !option.series || option.series.length === 0) return null
+    if (option.title && typeof option.title === 'string') {
+      option.title = { text: option.title }
+    }
+    return option
   } catch {
-    return {}
+    return null
   }
 }
 
@@ -732,7 +737,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="message-body">
             <div class="message-bubble md-body" v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : parseUserText(msg.content)"></div>
-            <div v-if="msg.chartData" class="message-chart">
+            <div v-if="msg.chartData && parseChartData(msg.chartData)" class="message-chart">
               <EChart :option="parseChartData(msg.chartData)" height="350px" />
             </div>
             <div v-if="msg.images && msg.images.length > 0" class="message-images">
