@@ -108,7 +108,7 @@ function resizeCanvas() {
 
 function animate() {
   if (!ctx || !canvas) return
-  ctx.fillStyle = 'rgba(6, 10, 22, 0.07)'
+  ctx.fillStyle = 'rgba(6, 10, 22, 0.3)'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.font = `${fontSize}px 'Courier New', monospace`
   const colors = ['#1a5c1a', '#2d8c2d', '#39ff14', '#0d3d0d', '#4dcc4d']
@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
 
         <p class="hero-subtitle">
           多模型 AI 智能体客户端<br>
-          <span class="hero-subtitle-dim">支持模型切换 · 视觉理解 · 工具调用 · 实时流式输出 · 数据可视化</span>
+          <span class="hero-subtitle-dim">支持模型切换 · 视觉理解 · 工具调用 · 数据可视化 · 实时流式输出</span>
         </p>
 
         <!-- Terminal boot window -->
@@ -254,7 +254,7 @@ onBeforeUnmount(() => {
       <div class="arch-diagram">
         <div class="arch-node arch-client">
           <span class="arch-label">CLIENT</span>
-          <span class="arch-detail">Vue 3 SPA</span>
+          <span class="arch-detail">Vue 3</span>
         </div>
         <div class="arch-arrow">
           <span class="arrow-line"></span>
@@ -262,7 +262,8 @@ onBeforeUnmount(() => {
         </div>
         <div class="arch-node arch-api">
           <span class="arch-label">API GATEWAY</span>
-          <span class="arch-detail">Spring Boot</span>
+          <span class="arch-detail">Spring Boot / Agent Scope</span>
+          <span class="arch-detail">(Agent Router-Tools-Skills...)</span>
         </div>
         <div class="arch-arrow">
           <span class="arrow-line"></span>

@@ -45,7 +45,7 @@ function resizeCanvas() {
 
 function animate() {
   if (!ctx || !canvas) return
-  ctx.fillStyle = 'rgba(6, 10, 22, 0.07)'
+  ctx.fillStyle = 'rgba(6, 10, 22, 0.3)'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.font = `${fontSize}px 'Courier New', monospace`
 
@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
     <div class="login-card">
       <div class="card-border"></div>
       <div class="glitch-wrapper">
-        <h1 class="glitch-title" data-text="AGENT SCOPE">AGENT SCOPE</h1>
+        <h1 class="glitch-title" data-text="WU·AGENT">WU·AGENT</h1>
       </div>
       <p class="subtitle">NEURAL CHAT INTERFACE</p>
 

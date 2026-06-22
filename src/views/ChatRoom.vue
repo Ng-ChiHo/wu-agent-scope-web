@@ -736,8 +736,8 @@ onBeforeUnmount(() => {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <h3>欢迎使用 Wu Agent</h3>
-          <p>输入你的问题，开始与 AI 对话</p>
+          <h3>欢迎使用 Wu Agent 2.0</h3>
+          <p>输入您的问题，开始与 AI 对话</p>
         </div>
 
         <!-- Messages -->
