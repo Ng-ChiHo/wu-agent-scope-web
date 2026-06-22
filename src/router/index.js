@@ -3,6 +3,12 @@ import { isLoggedIn } from '@/utils/auth'
 
 const routes = [
   {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/Home.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue'),
@@ -19,10 +25,6 @@ const routes = [
     name: 'ChatWithId',
     component: () => import('@/views/ChatRoom.vue'),
     meta: { requiresAuth: true }
-  },
-  {
-    path: '/',
-    redirect: '/chat'
   }
 ]
 
