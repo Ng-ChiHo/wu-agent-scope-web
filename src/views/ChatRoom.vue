@@ -668,7 +668,7 @@ onBeforeUnmount(() => {
             </svg>
             返回对话
           </button>
-          <span class="dashboard-title">系统Agent Scope 2.0数据看板</span>
+          <span class="dashboard-title">WU·AGENT 2.0数据看板</span>
         </div>
         <iframe
           :src="dashboardUrl"
@@ -682,7 +682,7 @@ onBeforeUnmount(() => {
       <template v-else>
       <header class="chat-header">
         <div class="header-left">
-          <h2 class="chat-title">AGENT SCOPE 2.0</h2>
+          <h2 class="chat-title">WU·AGENT 2.0</h2>
           <span class="chat-id" v-if="activeConversationId">{{ activeConversationId }}</span>
         </div>
         <div class="header-right">
