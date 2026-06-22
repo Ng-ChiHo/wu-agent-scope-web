@@ -23,6 +23,7 @@ const user = ref(getUser())
 // Sidebar
 const sidebarWidth = ref(280)
 const isDragging = ref(false)
+const sidebarOpen = ref(false) // 移动端侧边栏开关
 const conversations = ref([])
 const activeConversationId = ref(null)
 
@@ -214,11 +215,13 @@ function newConversation() {
   messages.value = []
   showDashboard.value = false
   router.push('/chat')
+  closeSidebarOnMobile()
   focusInput()
 }
 
 // Dashboard
 async function openDashboard() {
+  closeSidebarOnMobile()
   if (dashboardUrl.value) {
     showDashboard.value = true
     return
@@ -239,6 +242,7 @@ async function selectConversation(conv) {
   showDashboard.value = false
   activeConversationId.value = conv.conversationId
   router.push(`/chat/${conv.conversationId}`)
+  closeSidebarOnMobile()
   isLoadingMessages.value = true
   // Restore last used model for this conversation
   if (conv.lastModelId) {
@@ -510,6 +514,16 @@ async function handleLogout() {
 }
 
 // Sidebar drag
+function toggleSidebar() {
+  sidebarOpen.value = !sidebarOpen.value
+}
+
+function closeSidebarOnMobile() {
+  if (window.innerWidth <= 768) {
+    sidebarOpen.value = false
+  }
+}
+
 function startDrag(e) {
   isDragging.value = true
   const startX = e.clientX
@@ -561,8 +575,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="chat-container">
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" :class="{ visible: sidebarOpen }" @click="sidebarOpen = false"></div>
+
     <!-- Left Sidebar -->
-    <aside class="sidebar" :style="{ width: sidebarWidth + 'px' }">
+    <aside class="sidebar" :class="{ open: sidebarOpen }" :style="{ width: sidebarWidth + 'px' }">
       <div class="sidebar-header">
         <button class="new-chat-btn" @click="newConversation">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -682,6 +699,11 @@ onBeforeUnmount(() => {
       <template v-else>
       <header class="chat-header">
         <div class="header-left">
+          <button class="menu-btn" @click="toggleSidebar" title="打开侧边栏">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
           <h2 class="chat-title">WU·AGENT 2.0</h2>
           <span class="chat-id" v-if="activeConversationId">{{ activeConversationId }}</span>
         </div>
@@ -1993,5 +2015,143 @@ onBeforeUnmount(() => {
   width: 100%;
   border: none;
   background: #f1f5ddc5;
+}
+
+/* Mobile menu button - hidden on desktop */
+.menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(57, 255, 20, 0.06);
+  border: 1px solid rgba(57, 255, 20, 0.15);
+  border-radius: 2px;
+  color: #39ff14;
+  cursor: pointer;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.menu-btn:hover {
+  background: rgba(57, 255, 20, 0.12);
+  border-color: rgba(57, 255, 20, 0.3);
+}
+
+/* Sidebar overlay backdrop */
+.sidebar-overlay {
+  display: none;
+}
+
+/* ==================== Mobile Responsive ==================== */
+@media (max-width: 768px) {
+  /* Show hamburger button */
+  .menu-btn {
+    display: flex;
+  }
+
+  /* Hide splitter on mobile */
+  .splitter {
+    display: none;
+  }
+
+  /* Sidebar becomes a fixed overlay */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 280px !important;
+    box-shadow: none;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Overlay backdrop */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 190;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+  }
+
+  .sidebar-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Chat area takes full width */
+  .chat-area {
+    width: 100%;
+  }
+
+  /* Chat header adjustments */
+  .chat-header {
+    padding: 12px 16px;
+  }
+
+  .chat-title {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+  }
+
+  .chat-id {
+    display: none;
+  }
+
+  /* Chat messages padding reduction */
+  .chat-messages {
+    padding: 12px 10px;
+  }
+
+  /* Input area adjustments */
+  .chat-input-area {
+    padding: 10px 12px 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .model-selector-wrapper {
+    order: -1;
+    width: 100%;
+  }
+
+  .model-select {
+    width: 100%;
+    height: 36px;
+    font-size: 0.75rem;
+  }
+
+  .chat-input {
+    font-size: 16px; /* Prevent iOS zoom on focus */
+    min-height: 36px;
+  }
+
+  /* Message bubble max width */
+  .message-body {
+    max-width: 85%;
+  }
+
+  /* Dashboard adjustments */
+  .dashboard-header {
+    padding: 10px 12px;
+  }
+
+  .back-btn {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+  }
 }
 </style>
