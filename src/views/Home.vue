@@ -5,13 +5,6 @@ import { isLoggedIn } from '@/utils/auth'
 
 const router = useRouter()
 
-// Digital rain
-const chars = '01アイウエオカキクケコ∞∑∏√∫≈≠≤≥{}[]<>/\\|'.split('')
-const fontSize = 14
-let canvas, ctx, animFrameId
-let columns = []
-let drops = []
-
 // Terminal boot log
 const bootLines = [
   { text: '> INITIALIZING WU·AGENT INTERFACE v2.0...', delay: 0, color: 'green' },
@@ -72,6 +65,14 @@ const features = [
     desc: '基于 Metabase 构建多维度数据看板，实时统计模型调用量、响应延迟、Token 消耗与工具调用分布。按模型、用户、时段等多维交叉分析，让每一次推理都有据可查。',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" /></svg>`,
   },
+  {
+    id: 'SOON',
+    title: '即将推出',
+    subtitle: 'COMING SOON',
+    desc: 'RAG 知识库检索增强 · Long-Term Memory 长期记忆 · 多 Agent 协作 · TTS 语音识别模型 —— 下一代智能体能力正在路上...',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" /></svg>`,
+    coming: true,
+  },
 ]
 
 // Scroll state
@@ -81,50 +82,6 @@ const heroVisible = ref(true)
 function handleScroll() {
   scrolled.value = window.scrollY > 50
   heroVisible.value = window.scrollY < window.innerHeight * 0.6
-}
-
-// Matrix rain
-function initMatrix() {
-  canvas = document.getElementById('matrix-canvas-home')
-  if (!canvas) return
-  ctx = canvas.getContext('2d')
-  resizeCanvas()
-  window.addEventListener('resize', resizeCanvas)
-  animate()
-}
-
-function resizeCanvas() {
-  if (!canvas) return
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight
-  const colCount = Math.floor(canvas.width / fontSize)
-  columns = []
-  drops = []
-  for (let i = 0; i < colCount; i++) {
-    columns.push(Math.random() * canvas.width)
-    drops.push(Math.random() * canvas.height / fontSize)
-  }
-}
-
-function animate() {
-  if (!ctx || !canvas) return
-  ctx.fillStyle = 'rgba(6, 10, 22, 0.3)'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-  ctx.font = `${fontSize}px 'Courier New', monospace`
-  const colors = ['#1a5c1a', '#2d8c2d', '#39ff14', '#0d3d0d', '#4dcc4d']
-  for (let i = 0; i < drops.length; i++) {
-    const char = chars[Math.floor(Math.random() * chars.length)]
-    const color = colors[Math.floor(Math.random() * colors.length)]
-    ctx.fillStyle = color
-    ctx.globalAlpha = 0.15 + Math.random() * 0.2
-    ctx.fillText(char, columns[i], drops[i] * fontSize)
-    ctx.globalAlpha = 1
-    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-      drops[i] = 0
-    }
-    drops[i] += 0.4 + Math.random() * 0.6
-  }
-  animFrameId = requestAnimationFrame(animate)
 }
 
 function enterSystem() {
@@ -137,10 +94,9 @@ function enterSystem() {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
-  initMatrix()
 
   // Boot sequence
-  bootLines.forEach((line, i) => {
+  bootLines.forEach((line) => {
     setTimeout(() => {
       visibleLines.value.push(line)
     }, line.delay)
@@ -149,70 +105,97 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleScroll)
-  if (animFrameId) cancelAnimationFrame(animFrameId)
-  window.removeEventListener('resize', resizeCanvas)
   if (bootTimer) clearTimeout(bootTimer)
 })
 </script>
 
 <template>
   <div class="home-container">
-    <canvas id="matrix-canvas-home"></canvas>
-    <div class="scanline"></div>
-
     <!-- Fixed nav bar -->
     <nav :class="['nav', { scrolled }]">
       <div class="nav-inner">
-        <span class="nav-logo">WU·<span class="nav-logo-dot">AGENT</span></span>
-        <button class="nav-cta" @click="enterSystem">
-          <span class="btn-bracket">[</span> 进入系统 <span class="btn-bracket">]</span>
-        </button>
+        <span class="nav-logo">WU·<span class="nav-logo-accent">AGENT</span></span>
+        <button class="nav-cta" @click="enterSystem">进入系统</button>
       </div>
     </nav>
 
     <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-content">
-        <div class="hero-tag">
-          <span class="tag-dot"></span>
-          NEURAL INTERFACE v2.0
-        </div>
+      <!-- Background decoration -->
+      <div class="hero-bg">
+        <div class="mesh-blob mesh-1"></div>
+        <div class="mesh-blob mesh-2"></div>
+        <div class="mesh-blob mesh-3"></div>
+        <div class="dot-grid"></div>
+      </div>
 
-        <h1 class="glitch-title" data-text="WU·AGENT">WU·AGENT</h1>
-
-        <p class="hero-subtitle">
-          多模型 AI 智能体客户端<br>
-          <span class="hero-subtitle-dim">支持模型切换 · 视觉理解 · 工具调用 · 数据可视化 · 实时流式输出</span>
-        </p>
-
-        <!-- Terminal boot window -->
-        <div class="terminal-window">
-          <div class="terminal-header">
-            <div class="terminal-dots">
-              <span class="dot dot-red"></span>
-              <span class="dot dot-yellow"></span>
-              <span class="dot dot-green"></span>
+      <div class="hero-layout">
+        <div class="hero-left">
+          <!-- Terminal boot window -->
+          <div class="terminal-window">
+            <div class="terminal-header">
+              <div class="terminal-dots">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+              </div>
+              <span class="terminal-title">system.boot</span>
             </div>
-            <span class="terminal-title">system.boot</span>
-          </div>
-          <div class="terminal-body">
-            <div
-              v-for="(line, i) in visibleLines"
-              :key="i"
-              :class="['boot-line', `color-${line.color}`]"
-            >
-              {{ line.text }}
+            <div class="terminal-body">
+              <div
+                v-for="(line, i) in visibleLines"
+                :key="i"
+                :class="['boot-line', `color-${line.color}`]"
+              >
+                {{ line.text }}
+              </div>
+              <span class="cursor" v-if="visibleLines.length < bootLines.length">█</span>
+              <span class="cursor blink" v-else>█</span>
             </div>
-            <span class="cursor" v-if="visibleLines.length < bootLines.length">█</span>
-            <span class="cursor blink" v-else>█</span>
           </div>
         </div>
 
-        <button class="hero-cta" @click="enterSystem">
-          <span class="cta-bracket">&gt;</span>
-          进入 WU·AGENT
-          <span class="cta-bracket">&lt;</span>
-        </button>
+        <div class="hero-right">
+          <div class="hero-tag">
+            <span class="tag-dot"></span>
+            AI AGENT PLATFORM v2.0
+          </div>
+
+          <h1 class="hero-title">WU·<span class="title-accent">AGENT</span></h1>
+
+          <p class="hero-subtitle">
+            多模型 AI 智能体客户端
+          </p>
+          <p class="hero-desc">
+            支持模型切换 · 视觉理解 · 工具调用 · 数据可视化 · 日志追踪
+          </p>
+
+          <div class="hero-actions">
+            <button class="hero-cta primary" @click="enterSystem">
+              进入 WU·AGENT
+            </button>
+            <a href="#features" class="hero-cta secondary">
+              了解更多 ↓
+            </a>
+          </div>
+
+          <div class="hero-stats">
+            <div class="stat">
+              <span class="stat-value">5+</span>
+              <span class="stat-label">AI 模型</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+              <span class="stat-value">Router</span>
+              <span class="stat-label">Agent 智能路由</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+              <span class="stat-value">Harness</span>
+              <span class="stat-label">预置 Harness 扩展</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="scroll-hint">
@@ -222,7 +205,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- Features Section -->
-    <section class="features">
+    <section id="features" class="features">
       <div class="section-header">
         <span class="section-tag">CAPABILITIES</span>
         <h2 class="section-title">核心能力</h2>
@@ -230,8 +213,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="feature-grid">
-        <div v-for="f in features" :key="f.id" class="feature-pane">
-          <div class="pane-border"></div>
+        <div v-for="f in features" :key="f.id" :class="['feature-pane', { 'coming-soon': f.coming }]">
           <div class="pane-header">
             <span class="pane-id">{{ f.id }}</span>
             <span class="pane-subtitle">{{ f.subtitle }}</span>
@@ -262,8 +244,8 @@ onBeforeUnmount(() => {
         </div>
         <div class="arch-node arch-api">
           <span class="arch-label">API GATEWAY</span>
-          <span class="arch-detail">Spring Boot / Agent Scope</span>
-          <span class="arch-detail">(Agent Router-Tools-Skills...)</span>
+          <span class="arch-detail">JDK 21 / Spring Boot / Agent Scope</span>
+          <span class="arch-detail">(Agent Router - Tools - Skills...)</span>
         </div>
         <div class="arch-arrow">
           <span class="arrow-line"></span>
@@ -280,18 +262,16 @@ onBeforeUnmount(() => {
     <section class="cta-section">
       <div class="cta-content">
         <p class="cta-label">// SYSTEM ACCESS</p>
-        <h2 class="cta-title">准备好接入WU·AGENT了吗？</h2>
+        <h2 class="cta-title">准备好接入 WU·AGENT 了吗？</h2>
         <p class="cta-desc">使用体验账号 demo / 654321 快速体验，或注册你自己的账号。</p>
         <button class="hero-cta" @click="enterSystem">
-          <span class="cta-bracket">&gt;</span>
-          AUTHENTICATE
-          <span class="cta-bracket">&lt;</span>
+          立即体验
         </button>
       </div>
     </section>
 
     <footer class="footer">
-      &copy; 2026 WU·AGENT // NEURAL INTERFACE v2.0
+      &copy; 2026 WU·AGENT · AI Agent Platform v2.0
     </footer>
   </div>
 </template>
@@ -300,38 +280,10 @@ onBeforeUnmount(() => {
 .home-container {
   position: relative;
   min-height: 100vh;
-  background: #060a16;
-  color: #e0ffe0;
-  font-family: 'Courier New', monospace;
+  background: #f8f9fc;
+  color: #1e1b4b;
+  font-family: 'Inter', sans-serif;
   overflow-x: hidden;
-}
-
-/* Canvas & Scanline */
-#matrix-canvas-home {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.scanline {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(57, 255, 20, 0.008) 2px,
-    rgba(57, 255, 20, 0.008) 4px
-  );
-  pointer-events: none;
-  z-index: 1;
 }
 
 /* Nav */
@@ -347,9 +299,9 @@ onBeforeUnmount(() => {
 }
 
 .nav.scrolled {
-  background: rgba(6, 10, 22, 0.9);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .nav-inner {
@@ -362,38 +314,34 @@ onBeforeUnmount(() => {
 }
 
 .nav-logo {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1rem;
   font-weight: 700;
-  color: #39ff14;
-  letter-spacing: 4px;
-  text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+  color: #1e1b4b;
+  letter-spacing: 3px;
 }
 
-.nav-logo-dot {
-  color: rgba(57, 255, 20, 0.5);
+.nav-logo-accent {
+  color: #4338ca;
 }
 
 .nav-cta {
-  padding: 8px 20px;
-  background: transparent;
-  border: 1px solid rgba(57, 255, 20, 0.2);
-  color: #39ff14;
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
+  padding: 8px 24px;
+  background: #4338ca;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  letter-spacing: 2px;
+  transition: all 0.2s;
 }
 
 .nav-cta:hover {
-  background: rgba(57, 255, 20, 0.08);
-  border-color: rgba(57, 255, 20, 0.5);
-  box-shadow: 0 0 20px rgba(57, 255, 20, 0.1);
-}
-
-.btn-bracket {
-  color: rgba(57, 255, 20, 0.4);
+  background: #3730a3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
 }
 
 /* Hero */
@@ -402,15 +350,79 @@ onBeforeUnmount(() => {
   z-index: 2;
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 120px 32px 80px;
+  overflow: hidden;
 }
 
-.hero-content {
-  text-align: center;
-  max-width: 720px;
+/* Hero background decorations */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+}
+
+.mesh-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(67, 56, 202, 0.15) 0%, transparent 70%);
+  top: -200px;
+  right: -100px;
+}
+
+.mesh-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+  bottom: -150px;
+  left: -100px;
+}
+
+.mesh-3 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.dot-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.4;
+}
+
+.hero-layout {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 64px;
+}
+
+.hero-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-right {
+  flex: 1;
+  min-width: 0;
 }
 
 .hero-tag {
@@ -418,110 +430,155 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 6px 16px;
-  border: 1px solid rgba(57, 255, 20, 0.15);
-  font-size: 0.65rem;
-  color: rgba(57, 255, 20, 0.5);
-  letter-spacing: 4px;
-  margin-bottom: 32px;
-  font-family: 'Orbitron', sans-serif;
+  border: 1px solid #e5e7eb;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  color: #6b7280;
+  letter-spacing: 3px;
+  margin-bottom: 24px;
+  font-family: 'Space Grotesk', sans-serif;
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .tag-dot {
   width: 6px;
   height: 6px;
-  background: #39ff14;
+  background: #10b981;
   border-radius: 50%;
   animation: pulse-dot 2s infinite;
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 4px #39ff14; }
-  50% { opacity: 0.4; box-shadow: 0 0 0px #39ff14; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-.glitch-title {
-  font-family: 'Orbitron', sans-serif;
-  font-size: clamp(2.5rem, 8vw, 5rem);
-  font-weight: 900;
-  color: #39ff14;
-  text-shadow:
-    0 0 20px rgba(57, 255, 20, 0.6),
-    0 0 60px rgba(57, 255, 20, 0.3),
-    0 0 100px rgba(57, 255, 20, 0.1);
-  letter-spacing: 12px;
-  margin-bottom: 24px;
-  position: relative;
+.hero-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  color: #1e1b4b;
+  letter-spacing: 4px;
+  margin-bottom: 16px;
+  line-height: 1.1;
 }
 
-.glitch-title::before,
-.glitch-title::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.glitch-title::before {
-  color: #ffa500;
-  z-index: -1;
-  animation: glitch1 4s infinite;
-}
-
-.glitch-title::after {
-  color: #00ff88;
-  z-index: -2;
-  animation: glitch2 4s infinite;
-}
-
-@keyframes glitch1 {
-  0%, 88%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
-  90% { clip-path: inset(15% 0 45% 0); transform: translate(-4px, 2px); }
-  92% { clip-path: inset(55% 0 15% 0); transform: translate(4px, -1px); }
-  94% { clip-path: inset(25% 0 55% 0); transform: translate(-2px, 3px); }
-}
-
-@keyframes glitch2 {
-  0%, 88%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
-  89% { clip-path: inset(45% 0 25% 0); transform: translate(3px, -3px); }
-  91% { clip-path: inset(10% 0 65% 0); transform: translate(-4px, 2px); }
-  93% { clip-path: inset(35% 0 35% 0); transform: translate(3px, 1px); }
+.title-accent {
+  color: #4338ca;
 }
 
 .hero-subtitle {
-  font-size: 1.1rem;
-  color: rgba(224, 255, 224, 0.7);
-  line-height: 1.8;
+  font-size: 1.25rem;
+  color: #374151;
+  line-height: 1.6;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.hero-desc {
+  font-size: 0.95rem;
+  color: #6b7280;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
   margin-bottom: 48px;
 }
 
-.hero-subtitle-dim {
-  font-size: 0.85rem;
-  color: rgba(57, 255, 20, 0.35);
-  letter-spacing: 2px;
+.hero-cta {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hero-cta.primary {
+  background: #4338ca;
+  color: #ffffff;
+}
+
+.hero-cta.primary:hover {
+  background: #3730a3;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(67, 56, 202, 0.3);
+}
+
+.hero-cta.secondary {
+  background: #ffffff;
+  color: #4338ca;
+  border: 1px solid #e5e7eb;
+}
+
+.hero-cta.secondary:hover {
+  border-color: #4338ca;
+  background: #f5f3ff;
+}
+
+.hero-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 32px;
+  background: #e5e7eb;
 }
 
 /* Terminal Window */
 .terminal-window {
-  background: rgba(8, 14, 28, 0.95);
-  border: 1px solid rgba(57, 255, 20, 0.12);
-  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
   text-align: left;
-  margin-bottom: 48px;
   overflow: hidden;
   box-shadow:
-    0 0 40px rgba(57, 255, 20, 0.03),
-    inset 0 0 60px rgba(0, 0, 0, 0.3);
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 20px 60px rgba(67, 56, 202, 0.08);
+  transform: perspective(1000px) rotateY(3deg) rotateX(2deg);
+  transition: transform 0.4s;
+}
+
+.terminal-window:hover {
+  transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
 }
 
 .terminal-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  background: rgba(57, 255, 20, 0.03);
-  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .terminal-dots {
@@ -535,21 +592,24 @@ onBeforeUnmount(() => {
   border-radius: 50%;
 }
 
-.dot-red { background: #ff5f56; }
-.dot-yellow { background: #ffbd2e; }
-.dot-green { background: #27c93f; }
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #f59e0b; }
+.dot-green { background: #10b981; }
 
 .terminal-title {
   font-size: 0.7rem;
-  color: rgba(57, 255, 20, 0.3);
-  letter-spacing: 2px;
+  color: #9ca3af;
+  letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .terminal-body {
   padding: 20px 24px;
-  min-height: 240px;
+  min-height: 320px;
   font-size: 0.82rem;
   line-height: 1.8;
+  font-family: 'JetBrains Mono', monospace;
+  background: #f9fafb;
 }
 
 .boot-line {
@@ -561,12 +621,12 @@ onBeforeUnmount(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.color-green { color: #39ff14; }
-.color-amber { color: #ffa500; }
-.color-dim { color: rgba(57, 255, 20, 0.35); }
+.color-green { color: #059669; }
+.color-amber { color: #b45309; }
+.color-dim { color: #9ca3af; }
 
 .cursor {
-  color: #39ff14;
+  color: #059669;
   font-size: 0.85rem;
 }
 
@@ -579,63 +639,23 @@ onBeforeUnmount(() => {
   50% { opacity: 0; }
 }
 
-/* CTA Button */
-.hero-cta {
-  padding: 16px 48px;
-  border: 1px solid rgba(255, 165, 0, 0.3);
-  border-radius: 2px;
-  background: rgba(255, 165, 0, 0.06);
-  color: #ffa500;
-  font-size: 1rem;
-  font-weight: 700;
-  font-family: 'Orbitron', sans-serif;
-  letter-spacing: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-cta::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 165, 0, 0.1), transparent);
-  transition: left 0.5s;
-}
-
-.hero-cta:hover {
-  box-shadow: 0 0 40px rgba(255, 165, 0, 0.2);
-  border-color: rgba(255, 165, 0, 0.6);
-  transform: translateY(-2px);
-}
-
-.hero-cta:hover::before {
-  left: 100%;
-}
-
-.cta-bracket {
-  color: rgba(255, 165, 0, 0.5);
-  font-weight: 400;
-}
-
 /* Scroll hint */
 .scroll-hint {
   position: absolute;
   bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  z-index: 1;
 }
 
 .scroll-line {
   width: 1px;
   height: 40px;
-  background: linear-gradient(to bottom, rgba(57, 255, 20, 0.3), transparent);
+  background: linear-gradient(to bottom, #d1d5db, transparent);
   animation: scroll-pulse 2s infinite;
 }
 
@@ -646,8 +666,9 @@ onBeforeUnmount(() => {
 
 .scroll-text {
   font-size: 0.6rem;
-  color: rgba(57, 255, 20, 0.2);
+  color: #9ca3af;
   letter-spacing: 4px;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 /* Features Section */
@@ -667,29 +688,31 @@ onBeforeUnmount(() => {
 .section-tag {
   display: inline-block;
   padding: 4px 14px;
-  border: 1px solid rgba(57, 255, 20, 0.12);
-  font-size: 0.6rem;
-  color: rgba(57, 255, 20, 0.4);
-  letter-spacing: 4px;
-  font-family: 'Orbitron', sans-serif;
+  border: 1px solid #e5e7eb;
+  border-radius: 100px;
+  font-size: 0.65rem;
+  color: #6b7280;
+  letter-spacing: 3px;
+  font-family: 'Space Grotesk', sans-serif;
   margin-bottom: 16px;
+  background: #ffffff;
 }
 
 .section-title {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1.8rem;
   font-weight: 700;
-  color: #39ff14;
-  letter-spacing: 6px;
-  text-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
+  color: #1e1b4b;
+  letter-spacing: 2px;
   margin-bottom: 16px;
 }
 
 .section-line {
   width: 60px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #39ff14, transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #4338ca, transparent);
   margin: 0 auto;
+  border-radius: 1px;
 }
 
 .feature-grid {
@@ -700,36 +723,57 @@ onBeforeUnmount(() => {
 
 .feature-pane {
   position: relative;
-  padding: 36px;
-  background: rgba(8, 14, 28, 0.7);
-  border: 1px solid rgba(57, 255, 20, 0.08);
-  border-radius: 2px;
-  transition: all 0.4s;
-  backdrop-filter: blur(10px);
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.3s;
 }
 
 .feature-pane:hover {
-  border-color: rgba(57, 255, 20, 0.25);
-  box-shadow: 0 0 40px rgba(57, 255, 20, 0.05);
+  border-color: #4338ca;
+  box-shadow: 0 8px 32px rgba(67, 56, 202, 0.08);
   transform: translateY(-4px);
 }
 
-.pane-border {
-  position: absolute;
-  inset: -1px;
-  border-radius: 2px;
-  background: linear-gradient(135deg, rgba(57, 255, 20, 0.15), transparent 50%, transparent 80%, rgba(255, 165, 0, 0.08));
-  z-index: -1;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask-composite: xor;
-  padding: 1px;
-  opacity: 0;
-  transition: opacity 0.4s;
+/* Coming Soon card */
+.feature-pane.coming-soon {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1px dashed #c4b5fd;
+  position: relative;
+  overflow: hidden;
 }
 
-.feature-pane:hover .pane-border {
-  opacity: 1;
+.feature-pane.coming-soon::before {
+  content: 'COMING SOON';
+  position: absolute;
+  top: 16px;
+  right: -32px;
+  padding: 4px 40px;
+  background: #7c3aed;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+.feature-pane.coming-soon .pane-id {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+  color: #7c3aed;
+}
+
+.feature-pane.coming-soon .pane-icon {
+  color: #7c3aed;
+  opacity: 0.6;
+}
+
+.feature-pane.coming-soon:hover {
+  border-color: #7c3aed;
+  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.1);
 }
 
 .pane-header {
@@ -740,26 +784,29 @@ onBeforeUnmount(() => {
 }
 
 .pane-id {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 0.7rem;
-  color: #ffa500;
+  color: #7c3aed;
   padding: 2px 8px;
-  border: 1px solid rgba(255, 165, 0, 0.2);
-  letter-spacing: 2px;
+  border: 1px solid #e9d5ff;
+  border-radius: 6px;
+  background: #f5f3ff;
+  letter-spacing: 1px;
 }
 
 .pane-subtitle {
   font-size: 0.6rem;
-  color: rgba(57, 255, 20, 0.25);
-  letter-spacing: 3px;
+  color: #9ca3af;
+  letter-spacing: 2px;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .pane-icon {
   width: 40px;
   height: 40px;
-  color: #39ff14;
+  color: #4338ca;
   margin-bottom: 16px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .pane-icon :deep(svg) {
@@ -768,17 +815,16 @@ onBeforeUnmount(() => {
 }
 
 .pane-title {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1.1rem;
-  font-weight: 700;
-  color: #e0ffe0;
-  letter-spacing: 2px;
+  font-weight: 600;
+  color: #1e1b4b;
   margin-bottom: 12px;
 }
 
 .pane-desc {
   font-size: 0.85rem;
-  color: rgba(224, 255, 224, 0.5);
+  color: #6b7280;
   line-height: 1.7;
 }
 
@@ -805,29 +851,31 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 24px 32px;
-  border: 1px solid rgba(57, 255, 20, 0.12);
-  background: rgba(8, 14, 28, 0.8);
-  border-radius: 2px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 12px;
   min-width: 140px;
   text-align: center;
   transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .arch-node:hover {
-  border-color: rgba(57, 255, 20, 0.3);
-  box-shadow: 0 0 30px rgba(57, 255, 20, 0.06);
+  border-color: #4338ca;
+  box-shadow: 0 4px 16px rgba(67, 56, 202, 0.1);
 }
 
 .arch-label {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 0.7rem;
-  color: #39ff14;
-  letter-spacing: 3px;
+  color: #4338ca;
+  letter-spacing: 2px;
+  font-weight: 600;
 }
 
 .arch-detail {
   font-size: 0.7rem;
-  color: rgba(57, 255, 20, 0.35);
+  color: #6b7280;
 }
 
 .arch-arrow {
@@ -841,7 +889,7 @@ onBeforeUnmount(() => {
 .arrow-line {
   width: 60px;
   height: 1px;
-  background: linear-gradient(90deg, rgba(57, 255, 20, 0.1), rgba(57, 255, 20, 0.3), rgba(57, 255, 20, 0.1));
+  background: linear-gradient(90deg, #e5e7eb, #4338ca, #e5e7eb);
   position: relative;
 }
 
@@ -850,15 +898,16 @@ onBeforeUnmount(() => {
   position: absolute;
   right: -6px;
   top: -8px;
-  color: rgba(57, 255, 20, 0.3);
+  color: #4338ca;
   font-size: 0.8rem;
 }
 
 .arrow-label {
   font-size: 0.55rem;
-  color: rgba(57, 255, 20, 0.2);
-  letter-spacing: 2px;
+  color: #9ca3af;
+  letter-spacing: 1px;
   white-space: nowrap;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 /* CTA Section */
@@ -867,7 +916,8 @@ onBeforeUnmount(() => {
   z-index: 2;
   padding: 100px 32px;
   text-align: center;
-  border-top: 1px solid rgba(57, 255, 20, 0.06);
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
 }
 
 .cta-content {
@@ -877,23 +927,24 @@ onBeforeUnmount(() => {
 
 .cta-label {
   font-size: 0.65rem;
-  color: rgba(57, 255, 20, 0.25);
-  letter-spacing: 3px;
+  color: #9ca3af;
+  letter-spacing: 2px;
   margin-bottom: 16px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .cta-title {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #e0ffe0;
-  letter-spacing: 4px;
+  color: #1e1b4b;
+  letter-spacing: 1px;
   margin-bottom: 16px;
 }
 
 .cta-desc {
-  font-size: 0.85rem;
-  color: rgba(224, 255, 224, 0.4);
+  font-size: 0.9rem;
+  color: #6b7280;
   margin-bottom: 40px;
   line-height: 1.6;
 }
@@ -904,16 +955,33 @@ onBeforeUnmount(() => {
   z-index: 2;
   padding: 24px;
   text-align: center;
-  font-size: 0.65rem;
-  color: rgba(57, 255, 20, 0.12);
-  letter-spacing: 3px;
-  border-top: 1px solid rgba(57, 255, 20, 0.04);
+  font-size: 0.75rem;
+  color: #9ca3af;
+  letter-spacing: 1px;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
   .feature-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hero-layout {
+    flex-direction: column;
+    gap: 48px;
+  }
+
+  .hero-right {
+    width: 100%;
+  }
+
+  .terminal-window {
+    transform: none;
+  }
+
+  .terminal-window:hover {
+    transform: none;
   }
 }
 
@@ -930,7 +998,7 @@ onBeforeUnmount(() => {
   .arrow-line {
     width: 1px;
     height: 40px;
-    background: linear-gradient(to bottom, rgba(57, 255, 20, 0.1), rgba(57, 255, 20, 0.3), rgba(57, 255, 20, 0.1));
+    background: linear-gradient(to bottom, #e5e7eb, #4338ca, #e5e7eb);
   }
 
   .arrow-line::after {
@@ -940,16 +1008,43 @@ onBeforeUnmount(() => {
     bottom: -8px;
   }
 
-  .hero-subtitle {
-    font-size: 0.95rem;
+  .hero {
+    padding: 100px 20px 80px;
   }
 
-  .glitch-title {
-    letter-spacing: 6px;
+  .hero-title {
+    letter-spacing: 2px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .hero-cta {
+    justify-content: center;
+  }
+
+  .hero-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .stat-divider {
+    display: none;
   }
 
   .feature-pane {
     padding: 24px;
+  }
+
+  .mesh-1 {
+    width: 300px;
+    height: 300px;
+  }
+
+  .mesh-2 {
+    width: 250px;
+    height: 250px;
   }
 }
 </style>

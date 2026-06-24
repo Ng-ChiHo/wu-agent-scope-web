@@ -23,7 +23,7 @@ const user = ref(getUser())
 // Sidebar
 const sidebarWidth = ref(280)
 const isDragging = ref(false)
-const sidebarOpen = ref(false) // 移动端侧边栏开关
+const sidebarOpen = ref(false)
 const conversations = ref([])
 const activeConversationId = ref(null)
 
@@ -31,7 +31,7 @@ const activeConversationId = ref(null)
 const messages = ref([])
 const inputText = ref('')
 const isLoading = ref(false)
-const isLoadingMessages = ref(false) // 会话消息加载中
+const isLoadingMessages = ref(false)
 let currentEventSource = null
 let currentSseRequest = null
 
@@ -40,10 +40,9 @@ const availableModels = ref([])
 const selectedModelId = ref('')
 
 // Images
-const attachedImages = ref([]) // { base64, mimeType, previewUrl }
+const attachedImages = ref([])
 const fileInputRef = ref(null)
 
-// 判断当前模型是否支持 vision
 const isVisionModel = computed(() => {
   const model = availableModels.value.find(m => m.id === selectedModelId.value)
   return model?.capabilities?.includes('vision') || false
@@ -65,7 +64,6 @@ const deleteTargetId = ref(null)
 const chatMessagesRef = ref(null)
 const inputRef = ref(null)
 
-// Focus input helper
 function focusInput() {
   nextTick(() => {
     if (inputRef.value) {
@@ -74,17 +72,14 @@ function focusInput() {
   })
 }
 
-// Computed
 const activeConversation = computed(() =>
   conversations.value.find(c => c.conversationId === activeConversationId.value)
 )
 
-// Generate unique chat ID
 function generateChatId() {
   return 'chat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)
 }
 
-// Time formatting
 function formatTime(timestamp) {
   if (!timestamp) return ''
   const date = new Date(timestamp.replace(' ', 'T'))
@@ -114,7 +109,6 @@ function formatMessageTime(timestamp) {
   })
 }
 
-// Scroll to bottom
 function scrollToBottom() {
   nextTick(() => {
     if (chatMessagesRef.value) {
@@ -123,7 +117,6 @@ function scrollToBottom() {
   })
 }
 
-// Load conversations
 async function loadConversations() {
   try {
     const res = await fetchWithToken('/chat/conversations')
@@ -135,13 +128,11 @@ async function loadConversations() {
   }
 }
 
-// Load available models
 async function loadModels() {
   try {
     const res = await fetchWithToken('/ai/models')
     if (res.code === 0 && res.data) {
       availableModels.value = res.data
-      // If no model selected yet, use default
       if (!selectedModelId.value && res.data.length > 0) {
         const defaultModel = res.data.find(m => m.id === 'qwen2.5:14b') || res.data[0]
         selectedModelId.value = defaultModel.id
@@ -152,7 +143,6 @@ async function loadModels() {
   }
 }
 
-// 解析图表数据：兼容后端返回的 {chartType, title, echartsOption} 格式
 function parseChartData(chartDataStr) {
   try {
     const data = typeof chartDataStr === 'string' ? JSON.parse(chartDataStr) : chartDataStr
@@ -167,11 +157,8 @@ function parseChartData(chartDataStr) {
   }
 }
 
-// 从 content 中提取可展示的文本
 function extractTextContent(content) {
-  // 字符串类型（USER 消息常见）
   if (typeof content === 'string') return content
-  // 数组类型（ASSISTANT 消息：混合 text / tool_use）
   if (Array.isArray(content)) {
     return content
       .filter(item => item.type === 'text' && item.text)
@@ -181,7 +168,6 @@ function extractTextContent(content) {
   return ''
 }
 
-// Load messages for a conversation
 async function loadMessages(conversationId) {
   try {
     const res = await fetchWithToken(`/chat/conversation/messages?conversationId=${conversationId}`)
@@ -190,7 +176,6 @@ async function loadMessages(conversationId) {
         .filter(m => {
           const role = (m.role || '').toLowerCase()
           if (role !== 'user' && role !== 'assistant') return false
-          // 过滤掉只有 tool_use、没有 text 的 assistant 消息
           const text = extractTextContent(m.content)
           return text.trim() !== ''
         })
@@ -209,7 +194,22 @@ async function loadMessages(conversationId) {
   }
 }
 
-// New conversation
+function getTotalContentLength() {
+  return messages.value.reduce((sum, m) => sum + (m.content?.length || 0), 0)
+}
+
+async function reloadAfterSse(aiMsgIndex, streamedLength) {
+  if (!activeConversationId.value) return
+  await new Promise(resolve => setTimeout(resolve, 600))
+  const prevLen = streamedLength
+  await loadMessages(activeConversationId.value)
+  const newLen = getTotalContentLength()
+  if (newLen < prevLen) {
+    // API returned less content than streamed — backend still persisting, restore streamed version
+    await loadMessages(activeConversationId.value)
+  }
+}
+
 function newConversation() {
   activeConversationId.value = null
   messages.value = []
@@ -219,7 +219,6 @@ function newConversation() {
   focusInput()
 }
 
-// Dashboard
 async function openDashboard() {
   closeSidebarOnMobile()
   if (dashboardUrl.value) {
@@ -237,14 +236,12 @@ async function openDashboard() {
   }
 }
 
-// Select conversation
 async function selectConversation(conv) {
   showDashboard.value = false
   activeConversationId.value = conv.conversationId
   router.push(`/chat/${conv.conversationId}`)
   closeSidebarOnMobile()
   isLoadingMessages.value = true
-  // Restore last used model for this conversation
   if (conv.lastModelId) {
     selectedModelId.value = conv.lastModelId
   }
@@ -253,8 +250,6 @@ async function selectConversation(conv) {
   await nextTick()
   scrollToBottom()
 }
-
-// ==================== 图片处理 ====================
 
 function triggerFileInput() {
   fileInputRef.value?.click()
@@ -266,7 +261,7 @@ function handleImageUpload(event) {
 
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue
-    if (file.size > 20 * 1024 * 1024) { // 20MB limit
+    if (file.size > 20 * 1024 * 1024) {
       console.warn('图片过大，跳过:', file.name)
       continue
     }
@@ -274,7 +269,6 @@ function handleImageUpload(event) {
     const reader = new FileReader()
     reader.onload = (e) => {
       const dataUrl = e.target.result
-      // 提取 base64 部分（去掉 data:image/xxx;base64, 前缀）
       const base64 = dataUrl.split(',')[1]
       attachedImages.value.push({
         base64,
@@ -285,7 +279,6 @@ function handleImageUpload(event) {
     reader.readAsDataURL(file)
   }
 
-  // 清空 input 以允许重复选择同一文件
   event.target.value = ''
 }
 
@@ -293,7 +286,6 @@ function removeImage(index) {
   attachedImages.value.splice(index, 1)
 }
 
-// 剪贴板粘贴图片
 function handlePaste(event) {
   const items = event.clipboardData?.items
   if (!items) return
@@ -320,14 +312,12 @@ function handlePaste(event) {
   }
 }
 
-// 生成本地时间字符串（与后端返回格式一致：YYYY-MM-DD HH:mm:ss）
 function localTimestamp() {
   const d = new Date()
   const pad = n => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-// Send message via SSE
 function sendMessage() {
   const text = inputText.value.trim()
   if ((!text && attachedImages.value.length === 0) || isLoading.value) return
@@ -338,11 +328,9 @@ function sendMessage() {
     router.push(`/chat/${chatId}`)
   }
 
-  // Save images before clearing
   const imagesToSend = [...attachedImages.value]
   const hasImages = imagesToSend.length > 0
 
-  // Add user message (with image previews)
   messages.value.push({
     role: 'user',
     content: text,
@@ -354,7 +342,6 @@ function sendMessage() {
   resetTextareaHeight()
   scrollToBottom()
 
-  // Add AI placeholder
   const aiMsgIndex = messages.value.length
   messages.value.push({
     role: 'assistant',
@@ -366,7 +353,6 @@ function sendMessage() {
   let fullResponse = ''
 
   if (hasImages) {
-    // POST SSE: 有图片时使用 POST 方式
     const body = {
       message: text,
       chatId: chatId,
@@ -387,10 +373,8 @@ function sendMessage() {
         currentSseRequest = null
         isLoading.value = false
         loadConversations()
-        // POST SSE 不保留换行，重新加载消息以获取正确 markdown 格式
-        if (activeConversationId.value) {
-          loadMessages(activeConversationId.value)
-        }
+        const streamedLen = getTotalContentLength()
+        reloadAfterSse(aiMsgIndex, streamedLen)
         scrollToBottom()
         focusInput()
       },
@@ -405,7 +389,6 @@ function sendMessage() {
       }
     )
   } else {
-    // GET SSE: 纯文本时使用原有 EventSource 方式
     const encodedMsg = encodeURIComponent(text)
     const url = `/ai/chat/common/sse?message=${encodedMsg}&chatId=${encodeURIComponent(chatId)}`
 
@@ -422,10 +405,8 @@ function sendMessage() {
       currentEventSource = null
       isLoading.value = false
       loadConversations()
-      // SSE 流结束后重新加载消息，确保 markdown 格式正确
-      if (activeConversationId.value) {
-        loadMessages(activeConversationId.value)
-      }
+      const streamedLen = getTotalContentLength()
+      reloadAfterSse(aiMsgIndex, streamedLen)
       scrollToBottom()
       focusInput()
     })
@@ -445,7 +426,6 @@ function sendMessage() {
   }
 }
 
-// Auto-resize textarea
 function autoResize(e) {
   const el = e.target
   el.style.height = 'auto'
@@ -466,7 +446,6 @@ function handleKeydown(e) {
   }
 }
 
-// Rename conversation
 function startRename(conv) {
   editingId.value = conv.conversationId
   editingName.value = conv.conversationName
@@ -484,7 +463,6 @@ async function confirmRename() {
   editingName.value = ''
 }
 
-// Delete conversation
 function confirmDelete(conv) {
   deleteTargetId.value = conv.conversationId
   showDeleteModal.value = true
@@ -504,7 +482,6 @@ async function doDelete() {
   deleteTargetId.value = null
 }
 
-// Logout
 async function handleLogout() {
   try {
     await apiLogout()
@@ -513,7 +490,6 @@ async function handleLogout() {
   }
 }
 
-// Sidebar drag
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
 }
@@ -685,7 +661,7 @@ onBeforeUnmount(() => {
             </svg>
             返回对话
           </button>
-          <span class="dashboard-title">WU·AGENT 2.0数据看板</span>
+          <span class="dashboard-title">WU·AGENT 2.0 数据看板</span>
         </div>
         <iframe
           :src="dashboardUrl"
@@ -719,7 +695,7 @@ onBeforeUnmount(() => {
           <div class="loading-spinner-ring">
             <div class="ring-segment" v-for="i in 8" :key="i" :style="{ transform: `rotate(${i * 45}deg)` }"></div>
           </div>
-          <span class="loading-text">LOADING MESSAGES</span>
+          <span class="loading-text">加载中...</span>
           <div class="loading-bar">
             <div class="loading-bar-fill"></div>
           </div>
@@ -882,32 +858,16 @@ onBeforeUnmount(() => {
 .chat-container {
   display: flex;
   height: 100vh;
-  background: linear-gradient(135deg, #060a16 0%, #0a1020 50%, #0d1a2d 100%);
+  background: #f8f9fc;
   overflow: hidden;
-}
-
-/* Scanline overlay */
-.chat-container::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(57, 255, 20, 0.006) 2px,
-    rgba(57, 255, 20, 0.006) 4px
-  );
-  pointer-events: none;
-  z-index: 999;
 }
 
 /* Sidebar */
 .sidebar {
   display: flex;
   flex-direction: column;
-  background: rgba(6, 10, 22, 0.97);
-  border-right: 1px solid rgba(57, 255, 20, 0.08);
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
   flex-shrink: 0;
   position: relative;
   z-index: 10;
@@ -915,7 +875,7 @@ onBeforeUnmount(() => {
 
 .sidebar-header {
   padding: 16px;
-  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
+  border-bottom: 1px solid #f3f4f6;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -927,21 +887,19 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 6px;
   padding: 10px 12px;
-  background: rgba(57, 255, 20, 0.04);
-  border: 1px solid rgba(57, 255, 20, 0.1);
-  border-radius: 2px;
-  color: rgba(57, 255, 20, 0.5);
+  background: #f5f3ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 8px;
+  color: #7c3aed;
   font-size: 0.8rem;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
   text-decoration: none;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .jaeger-link:hover {
-  background: rgba(57, 255, 20, 0.08);
-  border-color: rgba(57, 255, 20, 0.25);
-  color: #39ff14;
-  box-shadow: 0 0 12px rgba(57, 255, 20, 0.06);
+  background: #ede9fe;
+  border-color: #c4b5fd;
 }
 
 .new-chat-btn {
@@ -951,20 +909,20 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 8px;
   padding: 12px;
-  background: rgba(57, 255, 20, 0.06);
-  border: 1px dashed rgba(57, 255, 20, 0.2);
-  border-radius: 2px;
-  color: #39ff14;
+  background: #ffffff;
+  border: 1px dashed #c4b5fd;
+  border-radius: 10px;
+  color: #4338ca;
   font-size: 0.9rem;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .new-chat-btn:hover {
-  background: rgba(57, 255, 20, 0.12);
-  border-color: rgba(57, 255, 20, 0.4);
-  box-shadow: 0 0 20px rgba(57, 255, 20, 0.08);
+  background: #f5f3ff;
+  border-color: #4338ca;
 }
 
 .conversation-list {
@@ -983,20 +941,18 @@ onBeforeUnmount(() => {
 
 .conv-section-title {
   font-size: 0.7rem;
-  color: rgba(57, 255, 20, 0.35);
-  font-family: 'Courier New', monospace;
+  color: #9ca3af;
+  font-family: 'Space Grotesk', sans-serif;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .conv-section-count {
   font-size: 0.65rem;
-  color: rgba(57, 255, 20, 0.3);
-  font-family: 'Courier New', monospace;
-  background: rgba(57, 255, 20, 0.06);
-  padding: 1px 6px;
-  border-radius: 8px;
-  border: 1px solid rgba(57, 255, 20, 0.08);
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 1px 8px;
+  border-radius: 100px;
 }
 
 .conversation-item {
@@ -1004,7 +960,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 12px;
-  border-radius: 2px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 4px;
@@ -1012,21 +968,21 @@ onBeforeUnmount(() => {
 }
 
 .conversation-item:hover {
-  background: rgba(57, 255, 20, 0.04);
+  background: #f5f3ff;
 }
 
 .conversation-item.active {
-  background: rgba(57, 255, 20, 0.08);
-  border-left: 2px solid #39ff14;
+  background: #eef2ff;
+  border-left: 3px solid #4338ca;
 }
 
 .conv-icon {
-  color: rgba(57, 255, 20, 0.25);
+  color: #d1d5db;
   flex-shrink: 0;
 }
 
 .conversation-item.active .conv-icon {
-  color: #39ff14;
+  color: #4338ca;
 }
 
 .conv-info {
@@ -1039,7 +995,7 @@ onBeforeUnmount(() => {
 
 .conv-name {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: #1e1b4b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1047,7 +1003,7 @@ onBeforeUnmount(() => {
 
 .conv-time {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: #9ca3af;
 }
 
 .conv-actions {
@@ -1064,41 +1020,41 @@ onBeforeUnmount(() => {
 .action-btn {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: #9ca3af;
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
 }
 
 .action-btn:hover {
-  color: #39ff14;
-  background: rgba(57, 255, 20, 0.1);
+  color: #4338ca;
+  background: #f5f3ff;
 }
 
 .action-btn.delete:hover {
-  color: #ff5050;
-  background: rgba(255, 80, 80, 0.1);
+  color: #ef4444;
+  background: #fef2f2;
 }
 
 .edit-input {
   width: 100%;
   padding: 4px 8px;
-  background: rgba(57, 255, 20, 0.04);
-  border: 1px solid rgba(57, 255, 20, 0.25);
-  border-radius: 2px;
-  color: #e0ffe0;
+  background: #ffffff;
+  border: 1px solid #c4b5fd;
+  border-radius: 6px;
+  color: #1e1b4b;
   font-size: 0.85rem;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
   outline: none;
 }
 
 .empty-convs {
   text-align: center;
   padding: 40px 16px;
-  color: rgba(255, 255, 255, 0.25);
+  color: #9ca3af;
   font-size: 0.85rem;
 }
 
@@ -1109,7 +1065,7 @@ onBeforeUnmount(() => {
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid rgba(57, 255, 20, 0.08);
+  border-top: 1px solid #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1124,46 +1080,45 @@ onBeforeUnmount(() => {
 .user-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 2px;
-  background: rgba(57, 255, 20, 0.1);
-  border: 1px solid rgba(57, 255, 20, 0.3);
+  border-radius: 8px;
+  background: #4338ca;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #39ff14;
-  font-family: 'Orbitron', sans-serif;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .user-name {
   font-size: 0.85rem;
-  color: rgba(57, 255, 20, 0.7);
-  font-family: 'Courier New', monospace;
+  color: #4b5563;
+  font-family: 'Inter', sans-serif;
 }
 
 .logout-btn {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: #9ca3af;
   cursor: pointer;
   padding: 6px;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
 }
 
 .logout-btn:hover {
-  color: #ff5050;
-  background: rgba(255, 80, 80, 0.1);
+  color: #ef4444;
+  background: #fef2f2;
 }
 
 /* Splitter */
 .splitter {
   width: 3px;
   cursor: col-resize;
-  background: rgba(57, 255, 20, 0.06);
+  background: #f3f4f6;
   transition: background 0.2s;
   flex-shrink: 0;
   position: relative;
@@ -1172,8 +1127,7 @@ onBeforeUnmount(() => {
 
 .splitter:hover,
 .splitter.dragging {
-  background: rgba(57, 255, 20, 0.3);
-  box-shadow: 0 0 10px rgba(57, 255, 20, 0.1);
+  background: #4338ca;
 }
 
 /* Chat Area */
@@ -1190,9 +1144,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
-  background: rgba(6, 10, 22, 0.8);
-  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
   flex-shrink: 0;
 }
 
@@ -1203,22 +1157,21 @@ onBeforeUnmount(() => {
 }
 
 .chat-title {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #39ff14;
-  text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
-  letter-spacing: 3px;
+  color: #1e1b4b;
+  letter-spacing: 2px;
 }
 
 .chat-id {
-  font-family: 'Courier New', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
-  color: rgba(57, 255, 20, 0.3);
+  color: #9ca3af;
   padding: 2px 8px;
-  background: rgba(57, 255, 20, 0.04);
-  border: 1px solid rgba(57, 255, 20, 0.1);
-  border-radius: 2px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 
 .header-right {
@@ -1231,8 +1184,7 @@ onBeforeUnmount(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #39ff14;
-  box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+  background: #10b981;
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -1243,8 +1195,8 @@ onBeforeUnmount(() => {
 
 .status-text {
   font-size: 0.8rem;
-  color: rgba(57, 255, 20, 0.5);
-  font-family: 'Courier New', monospace;
+  color: #6b7280;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Conversation loading */
@@ -1253,7 +1205,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #060a16 0%, #0a1020 50%, #0d1a2d 100%);
+  background: #f8f9fc;
 }
 
 .loading-content {
@@ -1276,7 +1228,7 @@ onBeforeUnmount(() => {
   width: 3px;
   height: 12px;
   margin-left: -1.5px;
-  background: rgba(57, 255, 20, 0.15);
+  background: #e5e7eb;
   transform-origin: center 24px;
   border-radius: 1px;
   animation: ringPulse 1.2s ease-in-out infinite;
@@ -1292,36 +1244,30 @@ onBeforeUnmount(() => {
 .ring-segment:nth-child(8) { animation-delay: 1.05s; }
 
 @keyframes ringPulse {
-  0%, 100% { background: rgba(57, 255, 20, 0.15); height: 12px; }
-  50% { background: #39ff14; height: 18px; box-shadow: 0 0 8px rgba(57, 255, 20, 0.4); }
+  0%, 100% { background: #e5e7eb; height: 12px; }
+  50% { background: #4338ca; height: 18px; }
 }
 
 .loading-text {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 0.7rem;
-  color: rgba(57, 255, 20, 0.4);
-  letter-spacing: 4px;
-  animation: textFlicker 2s ease-in-out infinite;
-}
-
-@keyframes textFlicker {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem;
+  color: #6b7280;
+  letter-spacing: 2px;
 }
 
 .loading-bar {
   width: 200px;
-  height: 2px;
-  background: rgba(57, 255, 20, 0.08);
-  border-radius: 1px;
+  height: 3px;
+  background: #e5e7eb;
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .loading-bar-fill {
   width: 40%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, #39ff14, transparent);
-  border-radius: 1px;
+  background: linear-gradient(90deg, transparent, #4338ca, transparent);
+  border-radius: 2px;
   animation: barSweep 1.5s ease-in-out infinite;
 }
 
@@ -1346,24 +1292,25 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: rgba(57, 255, 20, 0.25);
+  color: #9ca3af;
   gap: 16px;
 }
 
 .welcome-icon {
-  color: rgba(57, 255, 20, 0.15);
+  color: #d1d5db;
 }
 
 .welcome-state h3 {
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1.2rem;
-  color: rgba(57, 255, 20, 0.5);
-  letter-spacing: 4px;
+  color: #6b7280;
+  letter-spacing: 1px;
 }
 
 .welcome-state p {
   font-size: 0.9rem;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
+  color: #9ca3af;
 }
 
 .message {
@@ -1398,15 +1345,15 @@ onBeforeUnmount(() => {
 }
 
 .message.user .message-avatar {
-  background: rgba(57, 255, 20, 0.12);
-  border: 1px solid rgba(57, 255, 20, 0.3);
-  color: #39ff14;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
 }
 
 .message.assistant .message-avatar {
-  background: rgba(255, 165, 0, 0.08);
-  border: 1px solid rgba(255, 165, 0, 0.2);
-  color: #ffa500;
+  background: #f5f3ff;
+  border: 1px solid #e9d5ff;
+  color: #7c3aed;
 }
 
 .message-body {
@@ -1425,40 +1372,41 @@ onBeforeUnmount(() => {
 
 .message-bubble {
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: 12px;
   font-size: 0.9rem;
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
 }
 
 .message.user .message-bubble {
-  background: rgba(57, 255, 20, 0.06);
-  border: 1px solid rgba(57, 255, 20, 0.1);
-  border-left: 3px solid rgba(57, 255, 20, 0.35);
-  color: #c0e8c0;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-left: 3px solid #4338ca;
+  color: #1e1b4b;
 }
 
 .message.assistant .message-bubble {
-  background: rgba(255, 165, 0, 0.04);
-  border: 1px solid rgba(255, 165, 0, 0.08);
-  border-left: 3px solid rgba(255, 165, 0, 0.3);
-  color: rgba(255, 255, 255, 0.85);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #7c3aed;
+  color: #374151;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .message-time {
   font-size: 0.65rem;
   padding: 0 4px;
-  font-family: 'Courier New', monospace;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .message.user .message-time {
-  color: rgba(57, 255, 20, 0.35);
+  color: #9ca3af;
 }
 
 .message.assistant .message-time {
-  color: rgba(255, 165, 0, 0.35);
+  color: #9ca3af;
 }
 
 /* Markdown body styles */
@@ -1474,14 +1422,13 @@ onBeforeUnmount(() => {
 .md-body :deep(h4),
 .md-body :deep(h5),
 .md-body :deep(h6) {
-  color: #2aad10;
-  font-family: 'Orbitron', sans-serif;
+  color: #1e1b4b;
+  font-family: 'Space Grotesk', sans-serif;
   margin: 16px 0 8px 0;
-  letter-spacing: 1px;
 }
 
-.md-body :deep(h1) { font-size: 1.3rem; border-bottom: 1px solid rgba(57, 255, 20, 0.15); padding-bottom: 8px; }
-.md-body :deep(h2) { font-size: 1.15rem; border-bottom: 1px solid rgba(57, 255, 20, 0.1); padding-bottom: 6px; }
+.md-body :deep(h1) { font-size: 1.3rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+.md-body :deep(h2) { font-size: 1.15rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 6px; }
 .md-body :deep(h3) { font-size: 1.05rem; }
 .md-body :deep(h4) { font-size: 0.95rem; }
 
@@ -1490,44 +1437,44 @@ onBeforeUnmount(() => {
 }
 
 .md-body :deep(a) {
-  color: #2aad10;
+  color: #4338ca;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .md-body :deep(a:hover) {
-  color: #39ff14;
+  color: #3730a3;
 }
 
 .md-body :deep(strong) {
-  color: #b8d0b8;
+  color: #1e1b4b;
   font-weight: 700;
 }
 
 .md-body :deep(em) {
-  color: rgba(255, 255, 255, 0.7);
+  color: #4b5563;
   font-style: italic;
 }
 
 .md-body :deep(del) {
-  color: rgba(255, 255, 255, 0.4);
+  color: #9ca3af;
   text-decoration: line-through;
 }
 
 .md-body :deep(code):not(.hljs) {
-  background: rgba(57, 255, 20, 0.06);
-  border: 1px solid rgba(57, 255, 20, 0.08);
-  border-radius: 2px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
   padding: 1px 6px;
   font-size: 0.85em;
-  color: #2aad10;
-  font-family: 'Courier New', monospace;
+  color: #7c3aed;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .md-body :deep(.code-block) {
   margin: 12px 0;
-  border: 1px solid rgba(57, 255, 20, 0.1);
-  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -1536,38 +1483,38 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 6px 12px;
-  background: rgba(57, 255, 20, 0.06);
-  border-bottom: 1px solid rgba(57, 255, 20, 0.1);
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .md-body :deep(.code-lang) {
   font-size: 0.7rem;
-  color: rgba(57, 255, 20, 0.4);
-  font-family: 'Courier New', monospace;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
   text-transform: uppercase;
 }
 
 .md-body :deep(.copy-btn) {
-  background: rgba(57, 255, 20, 0.06);
-  border: 1px solid rgba(57, 255, 20, 0.1);
-  border-radius: 2px;
-  color: rgba(57, 255, 20, 0.45);
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  color: #6b7280;
   font-size: 0.65rem;
   padding: 2px 8px;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
   transition: all 0.2s;
 }
 
 .md-body :deep(.copy-btn:hover) {
-  background: rgba(57, 255, 20, 0.12);
-  color: #2aad10;
+  background: #e5e7eb;
+  color: #1e1b4b;
 }
 
 .md-body :deep(pre) {
   margin: 0;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.3);
+  background: #f9fafb;
   overflow-x: auto;
 }
 
@@ -1582,9 +1529,10 @@ onBeforeUnmount(() => {
 .md-body :deep(blockquote) {
   margin: 10px 0;
   padding: 8px 16px;
-  border-left: 3px solid rgba(255, 165, 0, 0.4);
-  background: rgba(255, 165, 0, 0.04);
-  color: rgba(255, 255, 255, 0.7);
+  border-left: 3px solid #4338ca;
+  background: #f5f3ff;
+  color: #4b5563;
+  border-radius: 0 8px 8px 0;
 }
 
 .md-body :deep(blockquote p) {
@@ -1602,7 +1550,7 @@ onBeforeUnmount(() => {
 }
 
 .md-body :deep(li::marker) {
-  color: rgba(57, 255, 20, 0.35);
+  color: #9ca3af;
 }
 
 .md-body :deep(.table-wrapper) {
@@ -1617,38 +1565,38 @@ onBeforeUnmount(() => {
 }
 
 .md-body :deep(th) {
-  background: rgba(57, 255, 20, 0.04);
-  color: #2aad10;
+  background: #f9fafb;
+  color: #1e1b4b;
   font-weight: 600;
   text-align: left;
   padding: 8px 12px;
-  border: 1px solid rgba(57, 255, 20, 0.08);
+  border: 1px solid #e5e7eb;
 }
 
 .md-body :deep(td) {
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid #e5e7eb;
 }
 
 .md-body :deep(tr:hover td) {
-  background: rgba(57, 255, 20, 0.02);
+  background: #f9fafb;
 }
 
 .md-body :deep(hr) {
   border: none;
-  border-top: 1px solid rgba(57, 255, 20, 0.1);
+  border-top: 1px solid #e5e7eb;
   margin: 16px 0;
 }
 
 .md-body :deep(img) {
   max-width: 100%;
-  border-radius: 4px;
+  border-radius: 8px;
   margin: 8px 0;
 }
 
 .md-body :deep(input[type="checkbox"]) {
   margin-right: 6px;
-  accent-color: #39ff14;
+  accent-color: #4338ca;
 }
 
 /* Typing indicator */
@@ -1656,17 +1604,17 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 6px;
   padding: 12px 16px;
-  background: rgba(255, 165, 0, 0.05);
-  border: 1px solid rgba(255, 165, 0, 0.1);
-  border-radius: 4px;
-  border-left: 3px solid #ffa500;
+  background: #f5f3ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 12px;
+  border-left: 3px solid #7c3aed;
 }
 
 .typing-indicator span {
   width: 6px;
   height: 6px;
-  border-radius: 0;
-  background: #ffa500;
+  border-radius: 50%;
+  background: #7c3aed;
   animation: bounce 1.4s ease-in-out infinite;
 }
 
@@ -1684,9 +1632,9 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  background: rgba(6, 10, 22, 0.8);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(57, 255, 20, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
 
@@ -1698,36 +1646,35 @@ onBeforeUnmount(() => {
 .model-select {
   height: 44px;
   padding: 0 12px;
-  background: rgba(57, 255, 20, 0.04);
-  border: 1px solid rgba(57, 255, 20, 0.15);
-  border-radius: 2px;
-  color: rgba(57, 255, 20, 0.7);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
   font-size: 0.8rem;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   outline: none;
-  transition: all 0.3s;
+  transition: all 0.2s;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2339ff14' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 30px;
 }
 
 .model-select:hover {
-  border-color: rgba(57, 255, 20, 0.4);
-  background-color: rgba(57, 255, 20, 0.08);
+  border-color: #c4b5fd;
 }
 
 .model-select:focus {
-  border-color: rgba(57, 255, 20, 0.5);
-  box-shadow: 0 0 15px rgba(57, 255, 20, 0.08);
+  border-color: #4338ca;
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
 }
 
 .model-select option {
-  background: #0a1020;
-  color: #e0ffe0;
+  background: #ffffff;
+  color: #1e1b4b;
   padding: 8px;
 }
 
@@ -1736,50 +1683,50 @@ onBeforeUnmount(() => {
   min-height: 44px;
   max-height: 150px;
   padding: 12px 16px;
-  background: rgba(57, 255, 20, 0.03);
-  border: 1px solid rgba(57, 255, 20, 0.1);
-  border-radius: 2px;
-  color: #e0ffe0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: #1e1b4b;
   font-size: 0.9rem;
   line-height: 1.5;
   resize: none;
   outline: none;
-  transition: all 0.3s;
-  font-family: 'Courier New', monospace;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
 }
 
 .chat-input::placeholder {
-  color: rgba(57, 255, 20, 0.2);
+  color: #9ca3af;
 }
 
 .chat-input:focus {
-  border-color: rgba(57, 255, 20, 0.4);
-  box-shadow: 0 0 20px rgba(57, 255, 20, 0.06);
+  border-color: #4338ca;
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
 }
 
 .send-btn {
   width: 44px;
   height: 44px;
-  border-radius: 2px;
-  border: 1px solid rgba(57, 255, 20, 0.3);
-  background: rgba(57, 255, 20, 0.08);
-  color: #39ff14;
+  border-radius: 10px;
+  border: none;
+  background: #4338ca;
+  color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .send-btn:hover:not(:disabled) {
-  box-shadow: 0 0 25px rgba(57, 255, 20, 0.15);
-  background: rgba(57, 255, 20, 0.15);
-  border-color: rgba(57, 255, 20, 0.5);
+  background: #3730a3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
 }
 
 .send-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -1794,22 +1741,22 @@ onBeforeUnmount(() => {
 .image-upload-btn {
   width: 36px;
   height: 36px;
-  border-radius: 2px;
-  border: 1px solid rgba(57, 255, 20, 0.15);
-  background: transparent;
-  color: rgba(57, 255, 20, 0.5);
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #6b7280;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .image-upload-btn:hover:not(:disabled) {
-  color: #39ff14;
-  border-color: rgba(57, 255, 20, 0.4);
-  background: rgba(57, 255, 20, 0.08);
+  color: #4338ca;
+  border-color: #c4b5fd;
+  background: #f5f3ff;
 }
 
 .image-upload-btn:disabled {
@@ -1823,7 +1770,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 8px 12px;
   overflow-x: auto;
-  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .image-preview-item {
@@ -1835,8 +1782,8 @@ onBeforeUnmount(() => {
   width: 64px;
   height: 64px;
   object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid rgba(57, 255, 20, 0.15);
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .image-remove-btn {
@@ -1847,7 +1794,7 @@ onBeforeUnmount(() => {
   height: 18px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 60, 60, 0.8);
+  background: #ef4444;
   color: white;
   cursor: pointer;
   display: flex;
@@ -1857,7 +1804,7 @@ onBeforeUnmount(() => {
 }
 
 .image-remove-btn:hover {
-  background: rgba(255, 60, 60, 1);
+  background: #dc2626;
 }
 
 /* Message chart */
@@ -1867,7 +1814,8 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   border-radius: 12px;
   overflow: hidden;
-  background: #1e1e2e;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   padding: 12px;
 }
 
@@ -1883,8 +1831,8 @@ onBeforeUnmount(() => {
   max-width: 200px;
   max-height: 200px;
   object-fit: contain;
-  border-radius: 4px;
-  border: 1px solid rgba(57, 255, 20, 0.1);
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -1897,7 +1845,7 @@ onBeforeUnmount(() => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1906,28 +1854,27 @@ onBeforeUnmount(() => {
 }
 
 .modal-card {
-  background: #0a1020;
-  border: 1px solid rgba(57, 255, 20, 0.15);
-  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
   padding: 28px;
   width: 360px;
-  box-shadow: 0 0 60px rgba(57, 255, 20, 0.05);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
 }
 
 .modal-card h3 {
   font-size: 1.1rem;
   margin-bottom: 12px;
-  color: #39ff14;
-  font-family: 'Orbitron', sans-serif;
-  letter-spacing: 2px;
+  color: #1e1b4b;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .modal-card p {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: #6b7280;
   margin-bottom: 24px;
   line-height: 1.5;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
 }
 
 .modal-actions {
@@ -1938,33 +1885,33 @@ onBeforeUnmount(() => {
 
 .modal-btn {
   padding: 10px 20px;
-  border-radius: 2px;
+  border-radius: 8px;
   font-size: 0.85rem;
   cursor: pointer;
   border: none;
   transition: all 0.2s;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
 }
 
 .modal-btn.cancel {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
 }
 
 .modal-btn.cancel:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #e5e7eb;
 }
 
 .modal-btn.confirm {
-  background: rgba(255, 80, 80, 0.1);
-  color: #ff5050;
-  border: 1px solid rgba(255, 80, 80, 0.2);
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
 }
 
 .modal-btn.confirm:hover {
-  background: rgba(255, 80, 80, 0.2);
-  box-shadow: 0 0 15px rgba(255, 80, 80, 0.1);
+  background: #fee2e2;
 }
 
 /* Dashboard */
@@ -1980,8 +1927,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(57, 255, 20, 0.08);
-  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
 }
 
 .back-btn {
@@ -1989,32 +1936,32 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background: rgba(57, 255, 20, 0.06);
-  border: 1px solid rgba(57, 255, 20, 0.15);
-  border-radius: 2px;
-  color: rgba(57, 255, 20, 0.7);
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #4b5563;
   font-size: 0.8rem;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .back-btn:hover {
-  background: rgba(57, 255, 20, 0.12);
-  color: #39ff14;
+  background: #e5e7eb;
+  color: #1e1b4b;
 }
 
 .dashboard-title {
-  color: rgba(57, 255, 20, 0.6);
+  color: #6b7280;
   font-size: 0.85rem;
-  font-family: 'Courier New', monospace;
+  font-family: 'Inter', sans-serif;
 }
 
 .dashboard-iframe {
   flex: 1;
   width: 100%;
   border: none;
-  background: #f1f5ddc5;
+  background: #f8f9fc;
 }
 
 /* Mobile menu button - hidden on desktop */
@@ -2025,18 +1972,18 @@ onBeforeUnmount(() => {
   width: 36px;
   height: 36px;
   padding: 0;
-  background: rgba(57, 255, 20, 0.06);
-  border: 1px solid rgba(57, 255, 20, 0.15);
-  border-radius: 2px;
-  color: #39ff14;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #4b5563;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .menu-btn:hover {
-  background: rgba(57, 255, 20, 0.12);
-  border-color: rgba(57, 255, 20, 0.3);
+  background: #e5e7eb;
+  color: #1e1b4b;
 }
 
 /* Sidebar overlay backdrop */
@@ -2046,17 +1993,14 @@ onBeforeUnmount(() => {
 
 /* ==================== Mobile Responsive ==================== */
 @media (max-width: 768px) {
-  /* Show hamburger button */
   .menu-btn {
     display: flex;
   }
 
-  /* Hide splitter on mobile */
   .splitter {
     display: none;
   }
 
-  /* Sidebar becomes a fixed overlay */
   .sidebar {
     position: fixed;
     top: 0;
@@ -2072,15 +2016,14 @@ onBeforeUnmount(() => {
 
   .sidebar.open {
     transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
   }
 
-  /* Overlay backdrop */
   .sidebar-overlay {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.4);
     z-index: 190;
     opacity: 0;
     visibility: hidden;
@@ -2092,31 +2035,27 @@ onBeforeUnmount(() => {
     visibility: visible;
   }
 
-  /* Chat area takes full width */
   .chat-area {
     width: 100%;
   }
 
-  /* Chat header adjustments */
   .chat-header {
     padding: 12px 16px;
   }
 
   .chat-title {
-    font-size: 0.85rem;
-    letter-spacing: 2px;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
   }
 
   .chat-id {
     display: none;
   }
 
-  /* Chat messages padding reduction */
   .chat-messages {
     padding: 12px 10px;
   }
 
-  /* Input area adjustments */
   .chat-input-area {
     padding: 10px 12px 14px;
     gap: 8px;
@@ -2139,12 +2078,10 @@ onBeforeUnmount(() => {
     min-height: 36px;
   }
 
-  /* Message bubble max width */
   .message-body {
     max-width: 85%;
   }
 
-  /* Dashboard adjustments */
   .dashboard-header {
     padding: 10px 12px;
   }

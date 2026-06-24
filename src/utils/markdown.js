@@ -90,12 +90,23 @@ function escapeHtml(str) {
 }
 
 /**
+ * Preprocess markdown to fix common AI-generated issues
+ * - Add space after # in headings when missing (##text → ## text)
+ */
+function preprocessMarkdown(text) {
+  // Fix ATX headings that are missing the required space after #s
+  // e.g. "##🤔需要我做什么？" → "## 🤔需要我做什么？"
+  return text.replace(/^(#{1,6})(?=[^\s#])/gm, '$1 ')
+}
+
+/**
  * Parse markdown to sanitized HTML
  */
 export function renderMarkdown(text) {
   if (!text) return ''
   try {
-    const html = marked.parse(text)
+    const preprocessed = preprocessMarkdown(text)
+    const html = marked.parse(preprocessed)
     return DOMPurify.sanitize(html, {
       ADD_TAGS: ['button'],
       ADD_ATTR: ['onclick', 'class', 'target', 'rel']

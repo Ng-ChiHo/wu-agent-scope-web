@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiLogin, apiRegister } from '@/utils/auth'
 
@@ -11,75 +11,6 @@ const nickname = ref('')
 const loading = ref(false)
 const statusMsg = ref('')
 const statusType = ref('success')
-
-let canvas, ctx, animFrameId
-let spotlightEl
-
-// Digital rain background
-const chars = '01アイウエオカキクケコ∞∑∏√∫≈≠≤≥{}[]<>/\\|'.split('')
-const fontSize = 14
-let columns = []
-let drops = []
-
-function initMatrix() {
-  canvas = document.getElementById('matrix-canvas')
-  if (!canvas) return
-  ctx = canvas.getContext('2d')
-  resizeCanvas()
-  window.addEventListener('resize', resizeCanvas)
-  animate()
-}
-
-function resizeCanvas() {
-  if (!canvas) return
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight
-  const colCount = Math.floor(canvas.width / fontSize)
-  columns = []
-  drops = []
-  for (let i = 0; i < colCount; i++) {
-    columns.push(Math.random() * canvas.width)
-    drops.push(Math.random() * canvas.height / fontSize)
-  }
-}
-
-function animate() {
-  if (!ctx || !canvas) return
-  ctx.fillStyle = 'rgba(6, 10, 22, 0.3)'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-  ctx.font = `${fontSize}px 'Courier New', monospace`
-
-  const colors = ['#1a5c1a', '#2d8c2d', '#39ff14', '#0d3d0d', '#4dcc4d']
-
-  for (let i = 0; i < drops.length; i++) {
-    const char = chars[Math.floor(Math.random() * chars.length)]
-    const color = colors[Math.floor(Math.random() * colors.length)]
-    ctx.fillStyle = color
-    ctx.globalAlpha = 0.2 + Math.random() * 0.3
-    ctx.fillText(char, columns[i], drops[i] * fontSize)
-    ctx.globalAlpha = 1
-
-    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-      drops[i] = 0
-    }
-    drops[i] += 0.4 + Math.random() * 0.6
-  }
-  animFrameId = requestAnimationFrame(animate)
-}
-
-function handleMouseMove(e) {
-  if (spotlightEl) {
-    spotlightEl.style.left = e.clientX + 'px'
-    spotlightEl.style.top = e.clientY + 'px'
-    spotlightEl.style.opacity = '1'
-  }
-}
-
-function handleMouseLeave() {
-  if (spotlightEl) {
-    spotlightEl.style.opacity = '0'
-  }
-}
 
 function showStatus(msg, type = 'success') {
   statusMsg.value = msg
@@ -119,243 +50,312 @@ async function handleSubmit() {
 }
 
 onMounted(() => {
-  spotlightEl = document.querySelector('.spotlight')
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseleave', handleMouseLeave)
-  initMatrix()
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('mousemove', handleMouseMove)
-  document.removeEventListener('mouseleave', handleMouseLeave)
-  if (animFrameId) cancelAnimationFrame(animFrameId)
-  window.removeEventListener('resize', resizeCanvas)
+  // no-op
 })
 </script>
 
 <template>
   <div class="login-container">
-    <canvas id="matrix-canvas"></canvas>
-    <div class="spotlight"></div>
-    <div class="scanline"></div>
-
-    <div class="login-card">
-      <div class="card-border"></div>
-      <div class="glitch-wrapper">
-        <h1 class="glitch-title" data-text="WU·AGENT">WU·AGENT</h1>
+    <!-- Left brand panel -->
+    <div class="brand-panel">
+      <div class="brand-bg">
+        <div class="brand-blob blob-1"></div>
+        <div class="brand-blob blob-2"></div>
+        <div class="brand-grid"></div>
       </div>
-      <p class="subtitle">NEURAL CHAT INTERFACE</p>
-
-      <div class="tab-switch">
-        <button :class="['tab-btn', { active: isLoginMode }]" @click="isLoginMode = true">
-          <span class="btn-bracket">[</span> 登录 <span class="btn-bracket">]</span>
-        </button>
-        <button :class="['tab-btn', { active: !isLoginMode }]" @click="isLoginMode = false">
-          <span class="btn-bracket">[</span> 注册 <span class="btn-bracket">]</span>
-        </button>
-      </div>
-
-      <form @submit.prevent="handleSubmit" class="login-form">
-        <div class="input-group">
-          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          <input v-model="username" type="text" placeholder="用户名" autocomplete="username" />
-          <span class="input-line"></span>
+      <div class="brand-content">
+        <div class="brand-logo">
+          <span class="logo-text">WU·<span class="logo-accent">AGENT</span></span>
         </div>
-
-        <div class="input-group">
-          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <input v-model="password" type="password" placeholder="密码" autocomplete="current-password" />
-          <span class="input-line"></span>
+        <h1 class="brand-headline">多模型 AI 智能体<br>对话平台</h1>
+        <p class="brand-desc">
+          支持多种 LLM 模型切换、视觉理解、工具调用与实时流式输出。
+          从对话到行动，让 AI 成为你的智能伙伴。
+        </p>
+        <div class="brand-features">
+          <div class="brand-feature">
+            <div class="bf-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+                <path d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+              </svg>
+            </div>
+            <div>
+              <span class="bf-title">实时流式输出</span>
+              <span class="bf-desc">SSE 逐字响应，低延迟体验</span>
+            </div>
+          </div>
+          <div class="brand-feature">
+            <div class="bf-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+                <path d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+            </div>
+            <div>
+              <span class="bf-title">视觉理解</span>
+              <span class="bf-desc">图片上传粘贴，多模态交互</span>
+            </div>
+          </div>
+          <div class="brand-feature">
+            <div class="bf-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+                <path d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.653-4.655" />
+              </svg>
+            </div>
+            <div>
+              <span class="bf-title">工具调用</span>
+              <span class="bf-desc">自主调用外部工具与 Skills</span>
+            </div>
+          </div>
         </div>
-
-        <div v-if="!isLoginMode" class="input-group">
-          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-            <path d="M19 21v-1a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v1" />
-          </svg>
-          <input v-model="nickname" type="text" placeholder="昵称（可选）" />
-          <span class="input-line"></span>
-        </div>
-
-        <button type="submit" class="submit-btn" :disabled="loading">
-          <span v-if="loading" class="spinner"></span>
-          <span v-else class="btn-text">
-            <span class="btn-bracket">&gt;</span>
-            {{ isLoginMode ? 'AUTHENTICATE' : 'REGISTER' }}
-            <span class="btn-bracket">&lt;</span>
-          </span>
-        </button>
-      </form>
-
-      <div v-if="statusMsg" :class="['status-msg', statusType]">
-        <span class="status-icon">{{ statusType === 'success' ? '&#9670;' : '&#9670;' }}</span>
-        {{ statusMsg }}
-      </div>
-
-      <div class="demo-info">
-        <span class="demo-label">DEMO体验账号或自行注册</span>
-        <span class="demo-creds">demo/654321</span>
       </div>
     </div>
 
-    <footer class="footer">&copy; 2026 AGENT SCOPE // NEURAL INTERFACE v2.0</footer>
+    <!-- Right form panel -->
+    <div class="form-panel">
+      <div class="form-wrapper">
+        <div class="form-header">
+          <h1 class="form-title">WU·AGENT</h1>
+          <p class="form-subtitle">{{ isLoginMode ? '欢迎回来' : '创建账号' }}</p>
+        </div>
+
+        <div class="tab-switch">
+          <button :class="['tab-btn', { active: isLoginMode }]" @click="isLoginMode = true">
+            登录
+          </button>
+          <button :class="['tab-btn', { active: !isLoginMode }]" @click="isLoginMode = false">
+            注册
+          </button>
+        </div>
+
+        <form @submit.prevent="handleSubmit" class="login-form">
+          <div class="input-group">
+            <label class="input-label">用户名</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <input v-model="username" type="text" placeholder="请输入用户名" autocomplete="username" />
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">密码</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <input v-model="password" type="password" placeholder="请输入密码" autocomplete="current-password" />
+            </div>
+          </div>
+
+          <div v-if="!isLoginMode" class="input-group">
+            <label class="input-label">昵称 <span class="optional">可选</span></label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                <path d="M19 21v-1a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v1" />
+              </svg>
+              <input v-model="nickname" type="text" placeholder="请输入昵称" />
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" :disabled="loading">
+            <span v-if="loading" class="spinner"></span>
+            <span v-else>{{ isLoginMode ? '登录' : '注册' }}</span>
+          </button>
+        </form>
+
+        <div v-if="statusMsg" :class="['status-msg', statusType]">
+          {{ statusMsg }}
+        </div>
+
+        <div class="demo-info">
+          <span class="demo-label">DEMO</span>
+          <span class="demo-creds">体验账号 demo / 654321</span>
+        </div>
+      </div>
+
+      <footer class="form-footer">&copy; 2026 WU·AGENT</footer>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .login-container {
-  position: relative;
+  display: flex;
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
+}
+
+/* Left brand panel */
+.brand-panel {
+  flex: 1;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 64px;
   overflow: hidden;
-  background: #060a16;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
 }
 
-#matrix-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
+.brand-bg {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
 
-.scanline {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(57, 255, 20, 0.008) 2px,
-    rgba(57, 255, 20, 0.008) 4px
-  );
-  pointer-events: none;
-  z-index: 1;
+.brand-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
 }
 
-.spotlight {
-  position: fixed;
+.blob-1 {
   width: 400px;
   height: 400px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(57, 255, 20, 0.06) 0%, transparent 70%);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.3s;
+  background: rgba(124, 58, 237, 0.3);
+  top: -100px;
+  right: -100px;
 }
 
-.login-card {
-  position: relative;
-  z-index: 2;
-  width: 420px;
-  padding: 44px;
-  background: rgba(8, 14, 28, 0.9);
-  border: 1px solid rgba(57, 255, 20, 0.12);
-  border-radius: 4px;
-  backdrop-filter: blur(20px);
-  box-shadow:
-    0 0 60px rgba(57, 255, 20, 0.04),
-    inset 0 0 80px rgba(0, 0, 0, 0.4);
+.blob-2 {
+  width: 300px;
+  height: 300px;
+  background: rgba(16, 185, 129, 0.15);
+  bottom: -50px;
+  left: -50px;
 }
 
-.card-border {
+.brand-grid {
   position: absolute;
-  inset: -1px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, rgba(57, 255, 20, 0.2), transparent 40%, transparent 60%, rgba(255, 165, 0, 0.15));
-  z-index: -1;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask-composite: xor;
-  padding: 1px;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-.glitch-wrapper {
-  text-align: center;
+.brand-content {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+}
+
+.brand-logo {
+  margin-bottom: 32px;
+}
+
+.logo-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 4px;
+}
+
+.logo-accent {
+  color: #a5b4fc;
+}
+
+.brand-headline {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+
+.brand-desc {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.7;
+  margin-bottom: 40px;
+}
+
+.brand-features {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brand-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.bf-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a5b4fc;
+  flex-shrink: 0;
+}
+
+.bf-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2px;
+}
+
+.bf-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Right form panel */
+.form-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: #f8f9fc;
+  position: relative;
+}
+
+.form-wrapper {
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-header {
+  margin-bottom: 32px;
+}
+
+.form-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e1b4b;
+  letter-spacing: 3px;
   margin-bottom: 8px;
 }
 
-.glitch-title {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 2rem;
-  font-weight: 900;
-  color: #39ff14;
-  text-shadow:
-    0 0 10px rgba(57, 255, 20, 0.6),
-    0 0 30px rgba(57, 255, 20, 0.3),
-    0 0 60px rgba(57, 255, 20, 0.1);
-  position: relative;
-  letter-spacing: 6px;
-}
-
-.glitch-title::before,
-.glitch-title::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.glitch-title::before {
-  color: #ffa500;
-  z-index: -1;
-  animation: glitch1 4s infinite;
-}
-
-.glitch-title::after {
-  color: #00ff88;
-  z-index: -2;
-  animation: glitch2 4s infinite;
-}
-
-@keyframes glitch1 {
-  0%, 88%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
-  90% { clip-path: inset(15% 0 45% 0); transform: translate(-4px, 2px); }
-  92% { clip-path: inset(55% 0 15% 0); transform: translate(4px, -1px); }
-  94% { clip-path: inset(25% 0 55% 0); transform: translate(-2px, 3px); }
-}
-
-@keyframes glitch2 {
-  0%, 88%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
-  89% { clip-path: inset(45% 0 25% 0); transform: translate(3px, -3px); }
-  91% { clip-path: inset(10% 0 65% 0); transform: translate(-4px, 2px); }
-  93% { clip-path: inset(35% 0 35% 0); transform: translate(3px, 1px); }
-}
-
-.subtitle {
-  text-align: center;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 0.65rem;
-  color: rgba(57, 255, 20, 0.35);
-  letter-spacing: 8px;
-  margin-bottom: 36px;
+.form-subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
 }
 
 .tab-switch {
   display: flex;
-  background: rgba(57, 255, 20, 0.03);
-  border-radius: 2px;
+  background: #f3f4f6;
+  border-radius: 10px;
   padding: 4px;
   margin-bottom: 28px;
-  border: 1px solid rgba(57, 255, 20, 0.08);
 }
 
 .tab-btn {
@@ -363,36 +363,47 @@ onBeforeUnmount(() => {
   padding: 10px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.85rem;
+  color: #6b7280;
+  font-size: 0.9rem;
   cursor: pointer;
-  border-radius: 2px;
-  transition: all 0.3s;
+  border-radius: 8px;
+  transition: all 0.2s;
   font-weight: 600;
-  font-family: 'Courier New', monospace;
-}
-
-.tab-btn .btn-bracket {
-  color: rgba(57, 255, 20, 0.3);
+  font-family: 'Inter', sans-serif;
 }
 
 .tab-btn.active {
-  background: rgba(57, 255, 20, 0.08);
-  color: #39ff14;
-  box-shadow: 0 0 15px rgba(57, 255, 20, 0.1);
-}
-
-.tab-btn.active .btn-bracket {
-  color: #39ff14;
+  background: #ffffff;
+  color: #4338ca;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
 .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  font-family: 'Inter', sans-serif;
+}
+
+.input-label .optional {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
@@ -403,110 +414,65 @@ onBeforeUnmount(() => {
   left: 14px;
   width: 18px;
   height: 18px;
-  color: rgba(57, 255, 20, 0.3);
+  color: #9ca3af;
   pointer-events: none;
   z-index: 1;
 }
 
-.input-group input {
+.input-wrapper input {
   width: 100%;
-  padding: 14px 14px 14px 44px;
-  background: rgba(57, 255, 20, 0.02);
-  border: 1px solid rgba(57, 255, 20, 0.1);
-  border-radius: 2px;
-  color: #e0ffe0;
+  padding: 12px 14px 12px 44px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: #1e1b4b;
   font-size: 0.95rem;
   outline: none;
-  transition: all 0.3s;
-  font-family: 'Courier New', monospace;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
 }
 
-.input-group input::placeholder {
-  color: rgba(57, 255, 20, 0.2);
+.input-wrapper input::placeholder {
+  color: #9ca3af;
 }
 
-.input-group input:focus {
-  border-color: rgba(57, 255, 20, 0.5);
-  box-shadow: 0 0 20px rgba(57, 255, 20, 0.08);
-  background: rgba(57, 255, 20, 0.04);
-}
-
-.input-line {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 1px;
-  background: #39ff14;
-  transition: width 0.3s;
-}
-
-.input-group input:focus ~ .input-line {
-  width: 100%;
+.input-wrapper input:focus {
+  border-color: #4338ca;
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
 }
 
 .submit-btn {
   width: 100%;
   padding: 14px;
-  border: 1px solid rgba(57, 255, 20, 0.3);
-  border-radius: 2px;
-  background: rgba(57, 255, 20, 0.08);
-  color: #39ff14;
+  border: none;
+  border-radius: 10px;
+  background: #4338ca;
+  color: #ffffff;
   font-size: 0.95rem;
-  font-weight: 700;
-  font-family: 'Orbitron', sans-serif;
-  letter-spacing: 4px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 8px;
-  position: relative;
-  overflow: hidden;
-}
-
-.submit-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(57, 255, 20, 0.1), transparent);
-  transition: left 0.5s;
-}
-
-.submit-btn:hover:not(:disabled)::before {
-  left: 100%;
+  transition: all 0.2s;
+  margin-top: 4px;
 }
 
 .submit-btn:hover:not(:disabled) {
-  box-shadow: 0 0 30px rgba(57, 255, 20, 0.2);
-  border-color: rgba(57, 255, 20, 0.6);
+  background: #3730a3;
   transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(67, 56, 202, 0.3);
 }
 
 .submit-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
-}
-
-.btn-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn-bracket {
-  color: rgba(57, 255, 20, 0.5);
-  font-weight: 400;
 }
 
 .spinner {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(57, 255, 20, 0.2);
-  border-top-color: #39ff14;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -518,30 +484,22 @@ onBeforeUnmount(() => {
 .status-msg {
   margin-top: 16px;
   padding: 10px 16px;
-  border-radius: 2px;
+  border-radius: 10px;
   font-size: 0.85rem;
   text-align: center;
   animation: fadeIn 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 
 .status-msg.success {
-  background: rgba(57, 255, 20, 0.06);
-  color: #39ff14;
-  border: 1px solid rgba(57, 255, 20, 0.15);
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
 }
 
 .status-msg.error {
-  background: rgba(255, 80, 80, 0.06);
-  color: #ff5050;
-  border: 1px solid rgba(255, 80, 80, 0.15);
-}
-
-.status-icon {
-  font-size: 0.7rem;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
 @keyframes fadeIn {
@@ -553,37 +511,73 @@ onBeforeUnmount(() => {
   margin-top: 24px;
   text-align: center;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.25);
-  font-family: 'Courier New', monospace;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .demo-label {
   display: inline-block;
   padding: 2px 10px;
-  background: rgba(255, 165, 0, 0.1);
-  color: #ffa500;
-  border: 1px solid rgba(255, 165, 0, 0.2);
-  border-radius: 2px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #e9d5ff;
+  border-radius: 6px;
   font-size: 0.65rem;
   font-weight: 700;
-  margin-right: 10px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .demo-creds {
-  color: rgba(255, 255, 255, 0.4);
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
 }
 
-.footer {
-  position: fixed;
-  bottom: 16px;
-  left: 0;
-  width: 100%;
+.form-footer {
+  position: absolute;
+  bottom: 24px;
   text-align: center;
-  font-size: 0.65rem;
-  color: rgba(57, 255, 20, 0.15);
-  letter-spacing: 3px;
-  z-index: 2;
-  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  letter-spacing: 1px;
+}
+
+/* Mobile responsive */
+@media (max-width: 900px) {
+  .login-container {
+    flex-direction: column;
+  }
+
+  .brand-panel {
+    flex: none;
+    padding: 40px 24px;
+    min-height: auto;
+  }
+
+  .brand-headline {
+    font-size: 1.6rem;
+  }
+
+  .brand-desc {
+    margin-bottom: 24px;
+  }
+
+  .brand-features {
+    display: none;
+  }
+
+  .form-panel {
+    flex: 1;
+    padding: 32px 24px;
+  }
+
+  .form-footer {
+    position: static;
+    margin-top: 24px;
+  }
 }
 </style>
